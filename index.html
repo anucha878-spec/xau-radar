@@ -115,7 +115,7 @@ body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bot
   <div class="row"><button id="keySave">บันทึก &amp; โหลดข้อมูล</button><button id="ladderReset">ล้างประวัติบันได</button><button id="settingsClose">ปิด</button></div>
   <div class="note" id="settingsNote" style="margin-top:10px"></div>
   <div class="note" style="margin-top:10px">ข้อมูล: แท่งเทียนจาก Twelve Data (XAU/USD spot) · ราคาสดจาก gold-api.com ·
-  แจ้งเตือนทำงานเฉพาะตอนเปิดแอปไว้ · โควตาฟรี 800 ครั้ง/วัน แอปใช้ ~360 ครั้ง/วันถ้าเปิดค้างทั้งวัน</div>
+  แจ้งเตือนทำงานเฉพาะตอนเปิดแอปไว้ · โควตาฟรี 800 ครั้ง/วัน แอปใช้ ~315 ครั้ง/วันถ้าเปิดค้างทั้งวัน (เปิดแอป 3 ครั้ง + M15 ทุก 5 นาที + H1 ทุกชั่วโมง)</div>
 </div></div>
 <main>
   <div class="bias" id="bias">กำลังวิเคราะห์…</div>
@@ -688,12 +688,13 @@ function renderSignals() {
 const LS = { get: (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
              set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } } };
 const TF = { M15: ['15min', 600, 900], H1: ['1h', 500, 3600], H4: ['4h', 400, 14400], D1: ['1day', 300, 86400] };
+const FETCH = { M15: 600, H1: 2200, D1: 300 };          // H4 + D1 ล่าสุด ประกอบจาก H1 (ให้ขอบแท่งตรง Exness)
 const MOB = { TICK_MS: 5000, M15_REFRESH_MS: 5 * 60e3, HTF_REFRESH_MS: 60 * 60e3 };
 S.key = LS.get('tdKey', ''); S.trades = LS.get('trades', []); S.credits = 0;
 
 const parseT = dt => Date.parse(dt.length <= 10 ? dt + 'T00:00:00Z' : dt.replace(' ', 'T') + 'Z') / 1000;
-async function tdSeries(tf, n) {
-  const u = `https://api.twelvedata.com/time_series?symbol=XAU/USD&interval=${TF[tf][0]}&outputsize=${n}&timezone=UTC&order=asc&apikey=${encodeURIComponent(S.key)}`;
+async function tdSeries(iv, n) {
+  const u = `https://api.twelvedata.com/time_series?symbol=XAU/USD&interval=${iv}&outputsize=${n}&timezone=UTC&order=asc&apikey=${encodeURIComponent(S.key)}`;
   const j = await (await fetch(u)).json(); S.credits++;
   if (j.status === 'error' || !j.values) throw new Error('Twelve Data: ' + (j.message || 'ไม่มีข้อมูล'));
   return j.values.map(v => ({ t: parseT(v.datetime), o: +v.open, h: +v.high, l: +v.low, c: +v.close })).sort((x, y) => x.t - y.t);
@@ -703,14 +704,40 @@ function upsert(arr, bars, keep) {
     const i = arr.findIndex(x => x.t === b.t);
     if (i >= 0) arr[i] = b; else if (!arr.length || b.t > arr[arr.length - 1].t) arr.push(b);
   }
-  if (arr.length > keep) arr.splice(0, arr.length - keep);
+  if (keep && arr.length > keep) arr.splice(0, arr.length - keep);
 }
-// ตลาดทองปิด: ศ. 21:00 UTC → อา. 22:00 UTC (+ พักรายวัน 21:00–22:00 UTC)
+/* MOBILE PIPELINE — ทำให้แท่ง Twelve Data ตรงกับ Exness (ตรวจแล้ว 2026-10-02) */
+// ตลาดทองปิดตามเวลานิวยอร์ก: พักรายวัน 17:00–18:00 ET, ปิด ศ. 17:00 → เปิด อา. 18:00 ET
+// = 21:00/22:00 UTC ช่วง DST สหรัฐ (อาทิตย์ที่ 2 ของ มี.ค. → อาทิตย์แรกของ พ.ย.) และ 22:00/23:00 UTC นอก DST
+function usDST(t) {
+  const d = new Date(t * 1000), y = d.getUTCFullYear();
+  const nthSun = (m, n) => { const f = new Date(Date.UTC(y, m, 1)); return Date.UTC(y, m, 1 + (7 - f.getUTCDay()) % 7 + 7 * (n - 1)) / 1000; };
+  return t >= nthSun(2, 2) + 7 * 3600 && t < nthSun(10, 1) + 6 * 3600;
+}
 function marketOpen(t) {
-  const d = new Date(t * 1000), wd = d.getUTCDay(), h = d.getUTCHours();
-  if (wd === 6 || (wd === 5 && h >= 21) || (wd === 0 && h < 22)) return false;
-  return h !== 21;
+  const d = new Date(t * 1000), wd = d.getUTCDay(), h = d.getUTCHours(), cl = usDST(t) ? 21 : 22;
+  if (wd === 6 || (wd === 5 && h >= cl) || (wd === 0 && h < cl + 1)) return false;
+  return h !== cl;
 }
+function aggregate(bars, per, key) {                       // รวมแท่งเป็นช่วงเวลา (per วินาที, ขอบ UTC)
+  const out = [];
+  for (const b of bars) {
+    const k = key ? key(b.t) : Math.floor(b.t / per) * per, last = out[out.length - 1];
+    if (last && last.t === k) { last.h = Math.max(last.h, b.h); last.l = Math.min(last.l, b.l); last.c = b.c; }
+    else out.push({ t: k, o: b.o, h: b.h, l: b.l, c: b.c });
+  }
+  return out;
+}
+// raw = { M15, H1 (ยาว), D1 (TD ตัดวันแบบ NY) } → bars ตรง Exness: M15/H1 กรองช่วงปิดตลาด · H4/D1 ล่าสุด ประกอบจาก H1
+function buildBars(raw) {
+  const m15 = raw.M15.filter(b => marketOpen(b.t)), h1 = raw.H1.filter(b => marketOpen(b.t));
+  const h4 = aggregate(h1, 14400).slice(-TF.H4[1]);
+  const dH1 = aggregate(h1, 86400), firstFull = dH1.length > 1 ? dH1[1].t : Infinity;     // วันแรกของ H1 อาจไม่ครบวัน → ตัด
+  const dOld = raw.D1.filter(b => { const wd = new Date(b.t * 1000).getUTCDay(); return wd !== 0 && wd !== 6 && b.t < firstFull; });
+  const d1 = dOld.concat(dH1.filter(b => b.t >= firstFull)).slice(-TF.D1[1]);
+  return { M15: m15.slice(-TF.M15[1]), H1: h1.slice(-TF.H1[1]), H4: h4, D1: d1, h1all: h1 };
+}
+/* END PIPELINE */
 // ราคาสดจาก gold-api → อัปเดตแท่งที่กำลังก่อตัวทุก TF (แก้ให้ตรงด้วย Twelve Data ทุก 5 นาที)
 function applyTick(p, now) {
   let newM15 = false;
@@ -724,18 +751,21 @@ function applyTick(p, now) {
 async function loadAll() {
   if (!S.key) { openSettings('ใส่ API key ของ Twelve Data ก่อนใช้งาน'); setStatus(false, 'ยังไม่ได้ใส่ API key'); return false; }
   setStatus(true, 'กำลังโหลดแท่งเทียน…');
-  const b = {};
-  for (const tf of ['D1', 'H4', 'H1', 'M15']) b[tf] = await tdSeries(tf, TF[tf][1]);
-  S.bars = b; S.lastHTF = Date.now(); S.lastM15Fix = Date.now();
+  S.raw = { D1: await tdSeries('1day', FETCH.D1), H1: await tdSeries('1h', FETCH.H1), M15: await tdSeries('15min', FETCH.M15) };
+  S.bars = buildBars(S.raw); S.lastHTF = Date.now(); S.lastM15Fix = Date.now();
   await tick(true);
   return true;
 }
+function rebuild() {                                         // คงแท่งที่กำลังก่อตัวจาก tick ไว้ถ้า TD ยังไม่มี
+  const live = { M15: S.bars.M15.at(-1), H1: S.bars.H1.at(-1), H4: S.bars.H4.at(-1), D1: S.bars.D1.at(-1) };
+  S.bars = buildBars(S.raw);
+  for (const tf in live) { const a = S.bars[tf], l = live[tf]; if (l && (!a.length || l.t > a.at(-1).t)) a.push(l); }
+}
 async function refreshM15() {
-  upsert(S.bars.M15, await tdSeries('M15', 4), TF.M15[1]); S.lastM15Fix = Date.now();
+  upsert(S.raw.M15, await tdSeries('15min', 4), FETCH.M15); rebuild(); S.lastM15Fix = Date.now();
 }
 async function refreshHTF() {
-  for (const tf of ['H1', 'H4', 'D1']) upsert(S.bars[tf], await tdSeries(tf, 3), TF[tf][1]);
-  S.lastHTF = Date.now();
+  upsert(S.raw.H1, await tdSeries('1h', 5), FETCH.H1); rebuild(); S.lastHTF = Date.now();
 }
 async function spot() {
   const j = await (await fetch('https://api.gold-api.com/price/XAU')).json();
