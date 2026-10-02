@@ -186,6 +186,7 @@ const CFG = {
   SYS: {
     SELL_TP_R: 1,            // Sell: สัญญาณกลับตัว + Sweep + D และ H4 ไม่ใช่ขาขึ้น → TP 1R
     BUY_TP_R: 1,             // Buy: สัญญาณกลับตัว Buy ของแอป + D และ H4 ขาขึ้น → TP 1R
+    H1_TP_MIN_R: 0.3,        // ถ้าโซน H1 ฝั่งตรงข้ามขวางก่อนถึง TP (และไกล ≥0.3R) → TP ที่ขอบใกล้ของโซน H1 (backtest: win 55.5→60.1%, PF 1.18 เท่าเดิม)
     SWEEP_LOOKBACK: 30,      // swing high ล่าสุดภายในกี่แท่ง M15
     LIQ_RANGE_ATR_H1: 2,     // หา swing (liquidity) เลยโซนไม่เกิน 2×ATR(H1)
     LIQ_BUF_ATR_H1: 0.3,     // เผื่อ sweep เลย swing อีก 0.3×ATR(H1)
@@ -522,6 +523,14 @@ function systemSignals(S) {
   const b = S.bars.M15, n = b.length - 2, C = CFG.SYS, aH1 = S.trend.H1.atr, out = [];
   const pm = pivots(b.slice(0, -1), CFG.PIVOT.M15), ph = pivots(S.bars.H1.slice(-200, -1), CFG.PIVOT.H1);
   const entryAt = i => i === n ? S.price : b[i + 1].o;     // แท่งล่าสุด = ราคาตอนนี้ · ย้อนหลัง = เปิดแท่งถัดไป
+  // TP: tpR×R ตามปกติ · ถ้ามีโซน H1 ฝั่งตรงข้ามขวางก่อน (ระยะ H1_TP_MIN_R..tpR) → TP ที่ขอบใกล้ของโซน H1
+  const planTP = (sg, entry, R, tpR) => {
+    const opp = (S.zonesH1 || []).filter(z => z.side === (sg > 0 ? 'sell' : 'buy')).map(z => sg > 0 ? z.lo : z.hi)
+      .filter(p => sg * (p - entry) > 0).sort((a, c) => sg * (a - c))[0];
+    const d = opp != null ? sg * (opp - entry) / R : null;
+    if (d != null && d >= C.H1_TP_MIN_R && d < tpR) return { tp: opp, tpR: +d.toFixed(2), h1: true };
+    return { tp: entry + sg * tpR * R, tpR, h1: false };
+  };
   const dUp = S.trend.D1.dir >= 0.5, h4Up = S.trend.H4.dir >= 0.5;
   S.sysState = { sellOn: !dUp && !h4Up, buyOn: dUp && h4Up };
   // ---- SELL
@@ -536,8 +545,9 @@ function systemSignals(S) {
     const sl = pool.length ? Math.min(...pool) + C.LIQ_BUF_ATR_H1 * aH1 : edge + C.LIQ_FALLBACK_ATR_H1 * aH1;
     const entry = entryAt(i), R = sl - entry;
     if (R <= 0.5) continue;
-    out.push({ side: 'sell', i, t: x.t, entry, sl, tp: entry - C.SELL_TP_R * R, R, tpR: C.SELL_TP_R, sweptAt: sw, z: s.z,
-      why: `Sweep swing high ${fmt(sw)} แล้วปิดกลับ · โซน ${fmt(s.z.lo)}–${fmt(s.z.hi)} · SL ${pool.length ? 'พ้น liquidity ' + fmt(Math.min(...pool)) : 'ขอบ + 1×ATR H1'}` });
+    const P = planTP(-1, entry, R, C.SELL_TP_R);
+    out.push({ side: 'sell', i, t: x.t, entry, sl, tp: P.tp, R, tpR: P.tpR, sweptAt: sw, z: s.z,
+      why: `Sweep swing high ${fmt(sw)} แล้วปิดกลับ · โซน ${fmt(s.z.lo)}–${fmt(s.z.hi)} · SL ${pool.length ? 'พ้น liquidity ' + fmt(Math.min(...pool)) : 'ขอบ + 1×ATR H1'}${P.h1 ? ` · TP ที่แนวรับ H1 ${fmt(P.tp)} (ขวางก่อน 1R)` : ''}` });
   }
   // ---- BUY: สัญญาณกลับตัว Buy ของแอป เมื่อ D และ H4 ขาขึ้น · SL ใต้ liquidity (swing low ถัดไป) + เผื่อ sweep
   for (const s of S.signals) {
@@ -547,8 +557,9 @@ function systemSignals(S) {
     const sl = pool.length ? Math.max(...pool) - C.LIQ_BUF_ATR_H1 * aH1 : edge - C.LIQ_FALLBACK_ATR_H1 * aH1;
     const entry = entryAt(i), R = entry - sl;
     if (R <= 0.5) continue;
-    out.push({ side: 'buy', i, t: x.t, entry, sl, tp: entry + C.BUY_TP_R * R, R, tpR: C.BUY_TP_R, z: s.z,
-      why: `กลับตัวขึ้นที่โซน ${fmt(s.z.lo)}–${fmt(s.z.hi)} (${s.checks[1][0]}) · D ${S.trend.D1.label} + H4 ${S.trend.H4.label} · SL ${pool.length ? 'ใต้ liquidity ' + fmt(Math.max(...pool)) : 'ขอบ − 1×ATR H1'}` });
+    const P = planTP(1, entry, R, C.BUY_TP_R);
+    out.push({ side: 'buy', i, t: x.t, entry, sl, tp: P.tp, R, tpR: P.tpR, z: s.z,
+      why: `กลับตัวขึ้นที่โซน ${fmt(s.z.lo)}–${fmt(s.z.hi)} (${s.checks[1][0]}) · D ${S.trend.D1.label} + H4 ${S.trend.H4.label} · SL ${pool.length ? 'ใต้ liquidity ' + fmt(Math.max(...pool)) : 'ขอบ − 1×ATR H1'}${P.h1 ? ` · TP ที่แนวต้าน H1 ${fmt(P.tp)} (ขวางก่อน 1R)` : ''}` });
   }
   S.sys = out.sort((a, b2) => b2.t - a.t);
 }
@@ -730,11 +741,11 @@ function render() {
     cblk('rule-buy', st.buyOn ? 'buy' : '', st.buyOn ? '' : 'opacity:.6',
       `🟢 <b>Buy เมื่อกลับตัวที่โซน</b> ${st.buyOn ? '✅ เปิด' : '⛔ ปิด'}`,
       `<div class="checks">${st.buyOn ? 'รอสัญญาณกลับตัวขึ้นที่โซน Buy' : 'ปิดอยู่'} — ต้อง D และ H4 ขาขึ้น (ตอนนี้ D ${S.trend.D1.label}, H4 ${S.trend.H4.label})</div>
-       <div class="checks">Pin bar / Bullish engulfing ที่โซน · SL ใต้ liquidity · TP ${C.BUY_TP_R}R · backtest 2022–26: win 53.5% (เท่าทุน 50%) +0.07R/ไม้ PF 1.15 ~17 ไม้/เดือน · DD $498/0.01 lot · ซ้อนสูงสุด 5 ไม้</div>`) +
+       <div class="checks">Pin bar / Bullish engulfing ที่โซน · SL ใต้ liquidity · TP ${C.BUY_TP_R}R หรือแนวต้าน H1 ถ้าขวางก่อน · backtest 2022–26: win 59.3% +0.06R/ไม้ PF 1.14 ~17 ไม้/เดือน · DD $503/0.01 lot · ซ้อนสูงสุด 5 ไม้</div>`) +
     cblk('rule-sell', st.sellOn ? 'sell' : '', st.sellOn ? '' : 'opacity:.6',
       `🔴 <b>Sell เมื่อ Sweep</b> ${st.sellOn ? '✅ เปิด' : '⛔ ปิด — ' + (dUpNow ? 'D' : 'H4') + ' เป็นขาขึ้น'}`,
       `<div class="checks">${st.sellOn ? 'รอ sweep ที่โซน Sell' : 'ปิดอยู่'} — ต้อง D และ H4 ไม่ใช่ขาขึ้น (ตอนนี้ D ${S.trend.D1.label}, H4 ${S.trend.H4.label})</div>
-       <div class="checks">สัญญาณกลับตัวที่โซน + ไส้ทะลุ swing high ล่าสุดแล้วปิดกลับ · SL พ้น liquidity · TP ${C.SELL_TP_R}R · backtest 2022–26: win 58.1% (เท่าทุน 50%) +0.16R/ไม้ PF 1.38 ~3 ไม้/เดือน (สมมติฐาน — ต้อง forward test)</div>`) +
+       <div class="checks">สัญญาณกลับตัวที่โซน + ไส้ทะลุ swing high ล่าสุดแล้วปิดกลับ · SL พ้น liquidity · TP ${C.SELL_TP_R}R หรือแนวรับ H1 ถ้าขวางก่อน · backtest 2022–26: win 63.9% +0.13R/ไม้ PF 1.37 ~3 ไม้/เดือน (สมมติฐาน — ต้อง forward test)</div>`) +
     '<div id="sysSigs"></div>';
   syncSysBtn();
 
