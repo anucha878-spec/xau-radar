@@ -125,7 +125,7 @@ body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bot
       <div id="chart"></div>
       <div id="srsi"></div>
       <div class="srsi-lbl mono" id="srsiLbl"></div>
-      <p class="note">กราฟ M15 (เวลาไทย) · เส้นแดง = โซน Sell · เส้นเขียว = โซน Buy · ลูกศร = สัญญาณกลับตัวที่ปิดแท่งแล้ว</p>
+      <p class="note">กราฟ M15 (เวลาไทย) · เส้นแดง = โซน Sell · เส้นเขียว = โซน Buy · ลูกศร = สัญญาณระบบที่แจ้งจริง (✓ TP / ✗ SL)</p>
     </div>
     <div style="display:grid;gap:16px;align-content:start">
       <div class="panel" style="border-color:var(--gold)" id="sysPanel"><h2 class="ph">📋 ระบบเทรด <button id="btnSys" aria-expanded="true" title="ย่อ/ขยายรายละเอียดทุกส่วน">▾ ย่อทั้งหมด</button></h2><div id="ladder"></div><div id="system"></div></div>
@@ -616,23 +616,17 @@ function render() {
   syncZonesBtn();
 
   // signals
-  $('signals').innerHTML = S.signals.length ? S.signals.map(s => {
+  const lastClosedT = S.bars.M15[S.bars.M15.length - 2].t, sigNow = S.signals.filter(s => s.t === lastClosedT);   // ไม่แสดงย้อนหลัง (กัน repaint)
+  $('signals').innerHTML = sigNow.length ? sigNow.map(s => {
     if (s.kind === 'brk') return `<div class="sig brk">💥 <b>${fmtT(s.t)}</b> ปิดทะลุโซน ${fmt(s.z.lo)}–${fmt(s.z.hi)} ${s.side === 'up' ? 'ขึ้น' : 'ลง'} ที่ ${fmt(s.price)}
       <div class="checks">โซนนี้กลายเป็น${s.side === 'up' ? 'แนวรับ' : 'แนวต้าน'} — รอรีเทสต์ก่อนเข้า</div></div>`;
     return `<div class="sig ${s.side}">${s.side === 'sell' ? '🔻' : '🔺'} <b>${fmtT(s.t)}</b> กลับตัว${s.side === 'sell' ? 'ลง' : 'ขึ้น'} เกรด <b>${s.grade}</b> (เสริม ${s.passed}/3) ที่โซน ${fmt(s.z.lo)}–${fmt(s.z.hi)}
       <div class="checks">${s.checks.map(c => (c[1] ? '✅ ' : '▫️ ') + c[0]).join(' · ')}</div>
       <div class="checks mono">ปิดแท่ง ${fmt(s.price)} · SL ${fmt(s.sl)}</div></div>`;
-  }).join('') : '<div class="empty">ยังไม่มีสัญญาณใน 8 แท่ง M15 ล่าสุด — รอราคาเข้าโซนแล้วมีแท่งปฏิเสธ</div>';
+  }).join('') : '<div class="empty">แท่ง M15 ที่เพิ่งปิดไม่มีสัญญาณ — แสดงเฉพาะแท่งล่าสุด (ไม่ย้อนหลัง เพื่อไม่ให้ repaint)</div>';
 
   // system
   const st = S.sysState, C = CFG.SYS, dUpNow = S.trend.D1.dir >= 0.5;
-  const sysCard = x => {
-    const lot = (x.lot || (S.ladder ? S.ladder.lot : 0.01)).toFixed(2);
-    return cblk('sig' + x.side + x.t, x.side, '',
-      `${x.side === 'sell' ? '🔻 <b>SELL</b>' : '🔺 <b>BUY</b>'} <b>${fmtT(x.t + 900)}</b> <span class="mono"><b style="color:var(--gold)">${lot} lot</b> @ ${fmt(x.entry)}</span>`,
-      `<div class="checks mono" style="color:var(--text)">เข้า ${fmt(x.entry)} · SL ${fmt(x.sl)} · TP ${fmt(x.tp)} (${x.tpR}R) · เสี่ยง $${x.R.toFixed(1)}/0.01 lot</div>
-       <div class="checks">${x.why}</div>${tpHtml(tpLadder(S, x.side, x.entry, x.sl))}`);
-  };
   $('system').innerHTML =
     cblk('rule-buy', st.buyOn ? 'buy' : '', st.buyOn ? '' : 'opacity:.6',
       `🟢 <b>Buy เมื่อกลับตัวที่โซน</b> ${st.buyOn ? '✅ เปิด' : '⛔ ปิด'}`,
@@ -642,7 +636,7 @@ function render() {
       `🔴 <b>Sell เมื่อ Sweep</b> ${st.sellOn ? '✅ เปิด' : '⛔ ปิด — ' + (dUpNow ? 'D' : 'H4') + ' เป็นขาขึ้น'}`,
       `<div class="checks">${st.sellOn ? 'รอ sweep ที่โซน Sell' : 'ปิดอยู่'} — ต้อง D และ H4 ไม่ใช่ขาขึ้น (ตอนนี้ D ${S.trend.D1.label}, H4 ${S.trend.H4.label})</div>
        <div class="checks">สัญญาณกลับตัวที่โซน + ไส้ทะลุ swing high ล่าสุดแล้วปิดกลับ · SL พ้น liquidity · TP ${C.SELL_TP_R}R · backtest 2022–26: win 58.1% (เท่าทุน 50%) +0.16R/ไม้ PF 1.38 ~3 ไม้/เดือน (สมมติฐาน — ต้อง forward test)</div>`) +
-    (S.sys.length ? S.sys.map(sysCard).join('') : '<div class="empty">ยังไม่มีสัญญาณระบบใน 8 แท่ง M15 ล่าสุด</div>');
+    '<div id="sysSigs"></div>';
   syncSysBtn();
 
   // chart
@@ -663,12 +657,31 @@ function render() {
     priceLines.push(series.createPriceLine({ price: z.hi, color, lineWidth: 1, lineStyle: 2, axisLabelVisible: false, title: '' }));
     priceLines.push(series.createPriceLine({ price: z.lo, color, lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: `${z.side === 'sell' ? 'Sell' : 'Buy'} ${(r => r.h4 < 1 ? '<1' : r.h4.toFixed(0))(zoneReach(S, z))}%/${zoneReach(S, z).h24.toFixed(0)}%` }));
   });
-  series.setMarkers(S.sys.map(x => ({
-    time: x.t + CFG.TZ, position: x.side === 'sell' ? 'aboveBar' : 'belowBar', color: x.side === 'sell' ? '#ef5350' : '#26a69a',
-    shape: x.side === 'sell' ? 'arrowDown' : 'arrowUp', text: x.side === 'sell' ? 'SELL' : 'BUY' })).sort((a, b) => a.time - b.time));
-  const latest = S.sys.find(x => x.i === S.bars.M15.length - 2);
-  if (latest) [['SL', latest.sl, '#ef5350'], ['TP', latest.tp, '#26a69a'], ['เข้า', latest.entry, '#e3b341']].forEach(([t, p, c]) =>
-    priceLines.push(series.createPriceLine({ price: p, color: c, lineWidth: 2, lineStyle: 0, axisLabelVisible: true, title: t })));
+  renderSignals();
+}
+
+// สัญญาณระบบที่ "แจ้งจริง" เท่านั้น (จากบันทึก: server signals-log / localStorage บนมือถือ) — ไม่คำนวณย้อนหลัง จึงไม่ repaint
+function renderSignals() {
+  if (!S.bars || !series || !$('sysSigs')) return;
+  const T = (S.ladder && S.ladder.trades) || [];          // ใหม่ → เก่า
+  const stTxt = { open: '⏳ เปิดอยู่', TP: '✅ TP', SL: '❌ SL', TIME: '⌛ ครบ 24 ชม.' };
+  const card = t => cblk('sig' + t.key, t.side, t.status === 'open' ? '' : 'opacity:.75',
+    `${t.side === 'sell' ? '🔻 <b>SELL</b>' : '🔺 <b>BUY</b>'} <b>${fmtT(t.bar_time + 900)}</b> <span class="mono"><b style="color:var(--gold)">${(t.lot || 0.01).toFixed(2)} lot</b> @ ${fmt(t.entry)}</span>
+     <span class="sum">${stTxt[t.status] || ''}${t.pnl != null ? ` ${t.pnl >= 0 ? '+' : ''}$${t.pnl.toFixed(2)}` : ''}</span>`,
+    `<div class="checks mono" style="color:var(--text)">เข้า ${fmt(t.entry)} · SL ${fmt(t.sl)} · TP ${fmt(t.tp)} (${t.tpR}R) · เสี่ยง $${(+t.R).toFixed(1)}/0.01 lot</div>
+     <div class="checks">${t.why || ''}</div>${t.status === 'open' ? tpHtml(tpLadder(S, t.side, t.entry, t.sl)) : ''}`);
+  $('sysSigs').innerHTML = T.length
+    ? `<div class="note" style="margin:6px 0 4px">สัญญาณที่แจ้งจริง (จากบันทึก — ไม่เปลี่ยนย้อนหลัง)</div>` + T.slice(0, 5).map(card).join('')
+    : '<div class="empty">ยังไม่มีสัญญาณที่แจ้ง — ระบบตรวจทุกครั้งที่แท่ง M15 ปิด</div>';
+  syncSysBtn();
+  const t0 = S.bars.M15[Math.max(0, S.bars.M15.length - 400)].t, seen = new Set();
+  series.setMarkers(T.filter(t => t.bar_time >= t0 && !seen.has(t.bar_time) && seen.add(t.bar_time)).map(t => ({
+    time: t.bar_time + CFG.TZ, position: t.side === 'sell' ? 'aboveBar' : 'belowBar', color: t.side === 'sell' ? '#ef5350' : '#26a69a',
+    shape: t.side === 'sell' ? 'arrowDown' : 'arrowUp', text: `${t.side === 'sell' ? 'SELL' : 'BUY'}${t.status === 'TP' ? ' ✓' : t.status === 'SL' ? ' ✗' : ''}` })).sort((a, b) => a.time - b.time));
+  (S.tradeLines || []).forEach(l => series.removePriceLine(l)); S.tradeLines = [];
+  const open = T.find(t => t.status === 'open');
+  if (open) [['SL', open.sl, '#ef5350'], ['TP', open.tp, '#26a69a'], ['เข้า', open.entry, '#e3b341']].forEach(([t, p, c]) =>
+    S.tradeLines.push(series.createPriceLine({ price: p, color: c, lineWidth: 2, lineStyle: 0, axisLabelVisible: true, title: t })));
 }
 
 /* MOBILE DATA — Twelve Data (แท่งเทียน) + gold-api.com (ราคาสด) · ไม่มี server */
@@ -802,7 +815,7 @@ function renderLadder() {
     `<div class="checks">${L.reason} · กติกา: ไม้ล่าสุดที่ปิดชนะ → 0.02 · แพ้ → 0.01</div>
      <div class="checks">forward test: ปิดแล้ว ${L.closed} ไม้ · ชนะ ${L.wins} ไม้${L.closed ? ` (${(100 * L.wins / L.closed).toFixed(0)}%)` : ''} · รวม ${L.pnl_total >= 0 ? '+' : ''}$${L.pnl_total.toFixed(2)} · เปิดอยู่ ${L.open} ไม้</div>
      ${L.trades.length ? `<div class="checks mono" style="margin-top:4px">${L.trades.map(t => `${fmtT(t.bar_time + 900)} ${t.side.toUpperCase()} ${(t.lot || 0.01).toFixed(2)} @ ${fmt(t.entry)} → ${stTxt[t.status]}${t.pnl != null ? ` ${t.pnl >= 0 ? '+' : ''}$${t.pnl.toFixed(2)}` : ''}`).join('<br>')}</div>` : ''}`);
-  syncSysBtn();
+  syncSysBtn(); renderSignals();
 }
 function beep() { try { const a = new AudioContext(), o = a.createOscillator(), g = a.createGain(); o.connect(g); g.connect(a.destination); o.frequency.value = 880; g.gain.value = .1; o.start(); o.stop(a.currentTime + .25); } catch (e) { } }
 
