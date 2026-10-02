@@ -130,6 +130,8 @@ body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bot
     <div style="display:grid;gap:16px;align-content:start">
       <div class="panel" style="border-color:var(--gold)" id="sysPanel"><h2 class="ph">📋 ระบบเทรด <button id="btnSys" aria-expanded="true" title="ย่อ/ขยายรายละเอียดทุกส่วน">▾ ย่อทั้งหมด</button></h2><div id="ladder"></div><div id="system"></div></div>
       <div class="panel"><h2>⚡ สัญญาณกลับตัว M15 <span class="note">(ข้อมูลประกอบ — ไม่มี edge ไม่แจ้งเตือน)</span></h2><div id="signals"><div class="empty">ยังไม่มีสัญญาณ</div></div></div>
+      <div class="panel"><h2 class="ph">🧭 โซนกลับตัว H1 <button id="btnZonesH1" aria-expanded="true" title="ย่อ/ขยายรายละเอียดทุกโซน H1">▾ ย่อทั้งหมด</button></h2><div id="zonesH1"></div>
+        <div class="note" style="margin-top:6px">กรอบใหญ่สำหรับดูทิศ/เป้าหมาย — ยังไม่ผ่าน backtest ไม่ผูกกับระบบเทรด</div></div>
       <div class="panel"><h2 class="ph">🎯 โซนกลับตัว M15 <button id="btnZones" aria-expanded="true" title="ย่อ/ขยายรายละเอียดทุกโซน">▾ ย่อทั้งหมด</button></h2><div id="zones"></div></div>
     </div>
   </div>
@@ -153,6 +155,12 @@ const CFG = {
   ZONE_MAX_EACH_SIDE: 3,
   ZONE_MIN_SCORE: 2.5,
   ZONE_GAP_ATR_H1: 1,        // โซนฝั่งเดียวกันต้องห่างกัน ≥ 1×ATR(H1)
+  // โซนกลับตัว H1 (กรอบใหญ่ — ดูประกอบ ยังไม่ผ่าน backtest ไม่ผูกกับระบบเทรด)
+  H1Z: { RANGE_ATR_D1: 1.5, TOL_ATR_H4: 0.4, GAP_ATR_H4: 1, MIN_SCORE: 3, MAX_EACH_SIDE: 3 },
+  ZONE_METHOD: 'chain',      // 'chain' = ไล่รวมทีละระดับ (ระบบเทรดผ่าน backtest ด้วยวิธีนี้) · 'density' = จุดกระจุกตัว: โซนตรงกันข้ามแหล่งราคามากกว่า แต่ backtest ระบบแย่ลง (PF 1.18→1.07)
+  ZONE_BW_ATR_H1: 0.3,       // density: ความกว้าง kernel (σ) = 0.3×ATR(H1)
+  ZONE_CORE: 0.6,            // density: สมาชิกโซน = ระดับที่อยู่ในช่วงความหนาแน่น ≥ 60% ของยอด
+  ZONE_BOUNDS: 'members',    // density: 'members' = ขอบโซนจาก swing สุดขอบของสมาชิก (liquidity) · 'core' = ขอบตามความหนาแน่น
   SIGNAL_LOOKBACK: 8,        // ตรวจสัญญาณย้อนหลังกี่แท่ง M15 ที่ปิดแล้ว
   SIGNAL_COOLDOWN: 8,        // โซนเดิม ฝั่งเดิม ห้ามซ้ำภายในกี่แท่ง
   WEIGHT: { D1: 3, H4: 2, H1: 1 },
@@ -304,20 +312,44 @@ function buildZones(S) {
 
   const range = CFG.ZONE_RANGE_ATR_H4 * atrH4, tol = Math.max(0.4 * atrH1, 3);
   const pts = lv.filter(x => Math.abs(x.p - price) <= range).sort((a, b) => a.p - b.p);
-  const cl = [];
-  for (const x of pts) {
-    const z = cl[cl.length - 1];
-    if (z && x.p - z.lo <= tol) { z.hi = x.p; z.items.push(x); } else cl.push({ lo: x.p, hi: x.p, items: [x] });
-  }
-  const zones = cl.map(z => {
-    const score = z.items.reduce((s, x) => s + x.w, 0);
-    const srcCount = {};
-    z.items.forEach(x => { const k = x.src.replace(/ High| Low/, m => m); srcCount[k] = (srcCount[k] || 0) + 1; });
+  const mkZone = (items, lo, hi) => {
+    const score = items.reduce((s, x) => s + x.w, 0), srcCount = {};
+    items.forEach(x => { srcCount[x.src] = (srcCount[x.src] || 0) + 1; });
     const src = Object.entries(srcCount).map(([k, v]) => v > 1 ? `${k} ×${v}` : k);
-    let lo = z.lo, hi = z.hi;
-    if (hi - lo < 1) { lo -= 0.5; hi += 0.5; }
+    if (hi - lo < 1) { const m = (lo + hi) / 2; lo = m - 0.5; hi = m + 0.5; }
     return { lo, hi, mid: (lo + hi) / 2, score, src, stars: score >= 8 ? 3 : score >= 5 ? 2 : 1 };
-  }).filter(z => z.score >= CFG.ZONE_MIN_SCORE);
+  };
+  let zones;
+  if (CFG.ZONE_METHOD === 'density') {
+    // ความหนาแน่นแบบ Gaussian ของทุกระดับ (ถ่วงน้ำหนัก) → ยอด = โซน · ขอบ = ช่วงที่หนาแน่น ≥ ZONE_CORE×ยอด
+    // ราคาจากต่างแหล่งต่างกันเล็กน้อย → ยอดเลื่อนเล็กน้อยตาม (ไม่กระโดดเหมือนการตัดกลุ่มแบบ chain)
+    const bw = Math.max(CFG.ZONE_BW_ATR_H1 * atrH1, 1), step = Math.max(atrH1 / 60, 0.05);
+    const g0 = price - range - 3 * bw, n = Math.ceil((2 * range + 6 * bw) / step);
+    const dens = new Float64Array(n + 1);
+    for (const x of pts) { const i0 = Math.max(0, Math.floor((x.p - 4 * bw - g0) / step)), i1 = Math.min(n, Math.ceil((x.p + 4 * bw - g0) / step));
+      for (let i = i0; i <= i1; i++) { const d = (g0 + i * step - x.p) / bw; dens[i] += x.w * Math.exp(-0.5 * d * d); } }
+    const peaks = [];
+    for (let i = 1; i < n; i++) if (dens[i] > dens[i - 1] && dens[i] >= dens[i + 1] && dens[i] > 0.5) {
+      let a = i, b = i; const cut = CFG.ZONE_CORE * dens[i];
+      while (a > 0 && dens[a - 1] >= cut && dens[a - 1] <= dens[a] + 1e-9) a--;
+      while (b < n && dens[b + 1] >= cut && dens[b + 1] <= dens[b] + 1e-9) b++;
+      const lo = g0 + a * step, hi = g0 + b * step, items = pts.filter(x => x.p >= lo - 0.5 * bw && x.p <= hi + 0.5 * bw);
+      if (!items.length) continue;
+      const zlo = CFG.ZONE_BOUNDS === 'members' ? Math.min(...items.map(x => x.p)) : lo, zhi = CFG.ZONE_BOUNDS === 'members' ? Math.max(...items.map(x => x.p)) : hi;
+      peaks.push(Object.assign(mkZone(items, zlo, zhi), { peak: dens[i] }));
+    }
+    // non-maximum suppression: เก็บยอดสูงสุดก่อน ตัดยอดที่อยู่ใกล้กว่า ZONE_GAP_ATR_H1×ATR
+    const gapN = CFG.ZONE_GAP_ATR_H1 * atrH1, kept = [];
+    peaks.sort((a, b) => b.peak - a.peak).forEach(z => { if (!kept.some(k => Math.abs(k.mid - z.mid) < gapN)) kept.push(z); });
+    zones = kept.filter(z => z.score >= CFG.ZONE_MIN_SCORE);
+  } else {
+    const cl = [];
+    for (const x of pts) {
+      const z = cl[cl.length - 1];
+      if (z && x.p - z.lo <= tol) { z.hi = x.p; z.items.push(x); } else cl.push({ lo: x.p, hi: x.p, items: [x] });
+    }
+    zones = cl.map(z => mkZone(z.items, z.lo, z.hi)).filter(z => z.score >= CFG.ZONE_MIN_SCORE);
+  }
 
   const buf = Math.max(0.8 * atrM15, 2);
   // เลือกโซนจากใกล้ไปไกล — โซนที่ห่างกันไม่ถึง ZONE_GAP_ATR_H1 × ATR(H1) ให้เก็บตัวที่คะแนนสูงกว่า
@@ -349,6 +381,38 @@ function buildZones(S) {
   };
   S.zones = [...above.map(z => plan(z, 'sell')), ...below.map(z => plan(z, 'buy'))];
   S.insideZone = inside[0] || null;
+}
+
+// โซนกลับตัว H1: ระดับจาก swing H1/H4/D1 + High/Low เมื่อวาน/สัปดาห์ก่อน + EMA D1/H4 + เลขกลม → รวมกลุ่มแบบ chain (สเกล ATR H4)
+function buildZonesH1(S) {
+  const B = S.bars, price = S.price, C = CFG.H1Z, aH4 = S.trend.H4.atr, aD1 = S.trend.D1.atr, lv = [];
+  const add = (p, w, src) => lv.push({ p, w, src });
+  const take = (tf, k, back, w) => { const b = B[tf], { hs, ls } = pivots(b, k), from = b.length - back;
+    hs.filter(x => x.i >= from).forEach(x => add(x.p, w, `${tf} High`)); ls.filter(x => x.i >= from).forEach(x => add(x.p, w, `${tf} Low`)); };
+  take('H1', 3, 300, 1); take('H4', 2, 200, 2); take('D1', 2, 120, 3);
+  const D = B.D1, pd = D[D.length - 2]; add(pd.h, 2, 'High เมื่อวาน'); add(pd.l, 2, 'Low เมื่อวาน');
+  const wk = t => Math.floor((t / 86400 + 3) / 7);                    // เลขสัปดาห์ (เริ่มวันจันทร์ UTC)
+  const cw = wk(D[D.length - 1].t), pw = D.filter(b => wk(b.t) === cw - 1);
+  if (pw.length) { add(Math.max(...pw.map(b => b.h)), 3, 'High สัปดาห์ก่อน'); add(Math.min(...pw.map(b => b.l)), 3, 'Low สัปดาห์ก่อน'); }
+  const cD = D.map(b => b.c), e50 = ema(cD, 50), e200 = ema(cD, 200), n = cD.length - 1;
+  add(e50[n], 1.5, 'EMA50 D1'); add(e200[n], 1.5, 'EMA200 D1'); add(S.trend.H4.e200, 1, 'EMA200 H4');
+  for (let r = Math.floor((price - 300) / 50) * 50; r < price + 300; r += 50) add(r, r % 100 === 0 ? 1.5 : 0.5, `เลขกลม ${r}`);
+  const range = C.RANGE_ATR_D1 * aD1, tol = Math.max(C.TOL_ATR_H4 * aH4, 4);
+  const pts = lv.filter(x => Math.abs(x.p - price) <= range).sort((a, b) => a.p - b.p), cl = [];
+  for (const x of pts) { const z = cl[cl.length - 1]; if (z && x.p - z.lo <= tol) { z.hi = x.p; z.items.push(x); } else cl.push({ lo: x.p, hi: x.p, items: [x] }); }
+  const zones = cl.map(z => {
+    const score = z.items.reduce((a, x) => a + x.w, 0), cnt = {};
+    z.items.forEach(x => { cnt[x.src] = (cnt[x.src] || 0) + 1; });
+    let lo = z.lo, hi = z.hi; if (hi - lo < 1) { const m = (lo + hi) / 2; lo = m - 0.5; hi = m + 0.5; }
+    return { lo, hi, mid: (lo + hi) / 2, score, src: Object.entries(cnt).map(([k, v]) => v > 1 ? `${k} ×${v}` : k), stars: score >= 12 ? 3 : score >= 7 ? 2 : 1 };
+  }).filter(z => z.score >= C.MIN_SCORE);
+  const gap = C.GAP_ATR_H4 * aH4;
+  const pick = list => { const sel = []; for (const z of list) { const pv = sel[sel.length - 1];
+    if (pv && Math.abs(z.mid - pv.mid) < gap) { if (z.score > pv.score) sel[sel.length - 1] = z; } else sel.push(z); } return sel.slice(0, C.MAX_EACH_SIDE); };
+  const above = pick(zones.filter(z => z.lo > price).sort((a, b) => a.lo - b.lo)).map(z => Object.assign(z, { side: 'sell', dist: z.lo - price }));
+  const below = pick(zones.filter(z => z.hi < price).sort((a, b) => b.hi - a.hi)).map(z => Object.assign(z, { side: 'buy', dist: price - z.hi }));
+  S.zonesH1 = [...above, ...below];
+  S.insideZoneH1 = zones.find(z => z.lo <= price && z.hi >= price) || null;
 }
 
 function detectSignals(S) {
@@ -489,6 +553,7 @@ function analyze(S) {
   const P = CFG.STOCHRSI; S.srsi = stochRsi(mc, P.K, P.D, P.RSI, P.STOCH);
   const W = CFG.WEIGHT; S.biasScore = (S.trend.D1.dir * W.D1 + S.trend.H4.dir * W.H4 + S.trend.H1.dir * W.H1) / (W.D1 + W.H4 + W.H1);
   buildZones(S);
+  buildZonesH1(S);
   // สำหรับตรวจสัญญาณย้อนหลัง ใช้โซนทั้งสองฝั่งรวมโซนที่ราคาอยู่ตอนนี้
   S.zonesForSignals = [...S.zones, ...(S.insideZone ? [S.insideZone] : [])];
   detectSignals(S);
@@ -514,7 +579,7 @@ try {
 } catch (e) { }
 function autoReload() {
   try {
-    sessionStorage.setItem('uiState', JSON.stringify({ za: S.zonesAllClosed, zc: [...S.zonesClosed], sa: S.sysAllClosed, sc: [...S.sysClosed], y: window.scrollY }));
+    sessionStorage.setItem('uiState', JSON.stringify({ za: S.zonesAllClosed, zc: [...S.zonesClosed], sa: S.sysAllClosed, sc: [...S.sysClosed], h1a: S.zonesH1AllClosed, h1: [...S.zonesH1Closed], y: window.scrollY }));
     sessionStorage.setItem('autoReload', '1');
   } catch (e) { }
   location.reload();
@@ -526,6 +591,14 @@ function syncSysBtn() {
   if (S.sysAllClosed) els.forEach(el => { el.classList.add('closed'); S.sysClosed.add(el.dataset.k); });
   const anyOpen = els.some(el => !el.classList.contains('closed'));
   const b = $('btnSys'); b.textContent = anyOpen ? '▾ ย่อทั้งหมด' : '▸ ขยายทั้งหมด'; b.setAttribute('aria-expanded', anyOpen);
+}
+S.zonesH1Closed = new Set(); S.zonesH1AllClosed = true;      // เปิดหน้า = ย่อทั้งหมด
+try { if (S.restore && S.restore.h1) { S.zonesH1AllClosed = S.restore.h1a; S.zonesH1Closed = new Set(S.restore.h1); } } catch (e) { }
+function syncZonesH1Btn() {
+  const els = [...document.querySelectorAll('#zonesH1 .zone')];
+  if (S.zonesH1AllClosed) els.forEach(el => { el.classList.add('closed'); S.zonesH1Closed.add(el.dataset.k); });
+  const anyOpen = els.some(el => !el.classList.contains('closed'));
+  const b = $('btnZonesH1'); b.textContent = anyOpen ? '▾ ย่อทั้งหมด' : '▸ ขยายทั้งหมด'; b.setAttribute('aria-expanded', anyOpen);
 }
 function syncZonesBtn() {
   const els = [...document.querySelectorAll('#zones .zone')];
@@ -615,6 +688,23 @@ function render() {
     (buys.map(zhtml).join('') || '<div class="empty">ไม่มีโซน Buy ในระยะ</div>');
   syncZonesBtn();
 
+  // โซน H1
+  const zh1 = z => {
+    const r = zoneReach(S, z), k = 'h1' + z.side + Math.round(z.lo), closed = S.zonesH1Closed.has(k);
+    return `<div class="zone ${z.side}${closed ? ' closed' : ''}" data-k="${k}"><div class="top" title="คลิกเพื่อย่อ/ขยาย">
+      <span class="rng mono ${z.side === 'sell' ? 'down' : 'up'}"><span class="chev">▼</span>${z.side === 'sell' ? '🔴 แนวต้าน' : '🟢 แนวรับ'} ${fmt(z.lo)}–${fmt(z.hi)}<span class="sum mono">${'★'.repeat(z.stars)}</span></span>
+      <span class="mono" style="font-weight:700;color:${rc(r.h24)}">ถึง ${pf(r.h24)}<span class="sum">/24ชม.</span></span></div>
+      <div class="zbody">
+      <div class="meta">ราคามาถึงโซน: <b class="mono" style="color:${rc(r.h4)}">4 ชม. ${pf(r.h4)}</b> · <b class="mono" style="color:${rc(r.h24)}">24 ชม. ${pf(r.h24)}</b> · ห่าง $${z.dist.toFixed(1)} (${r.d.toFixed(1)}×ATR H1)</div>
+      <div class="meta">${z.src.join(' · ')}</div>
+      <div class="meta">คะแนน ${z.score.toFixed(1)} · ${z.side === 'sell' ? 'ถ้ามาถึง: ดูสัญญาณ Sell / จุดเก็บกำไรของ Buy' : 'ถ้ามาถึง: ดูสัญญาณ Buy / จุดเก็บกำไรของ Sell'}</div></div></div>`;
+  };
+  const h1s = S.zonesH1.filter(z => z.side === 'sell').sort((a, b) => b.lo - a.lo), h1b = S.zonesH1.filter(z => z.side === 'buy');
+  $('zonesH1').innerHTML = (h1s.map(zh1).join('') || '<div class="empty">ไม่มีแนวต้าน H1 ในระยะ</div>') +
+    `<div class="note mono" style="text-align:center;margin:6px 0">— ราคา ${fmt(S.price)}${S.insideZoneH1 ? ` · อยู่ในโซน H1 ${fmt(S.insideZoneH1.lo)}–${fmt(S.insideZoneH1.hi)}` : ''} —</div>` +
+    (h1b.map(zh1).join('') || '<div class="empty">ไม่มีแนวรับ H1 ในระยะ</div>');
+  syncZonesH1Btn();
+
   // signals
   const lastClosedT = S.bars.M15[S.bars.M15.length - 2].t, sigNow = S.signals.filter(s => s.t === lastClosedT);   // ไม่แสดงย้อนหลัง (กัน repaint)
   $('signals').innerHTML = sigNow.length ? sigNow.map(s => {
@@ -656,6 +746,12 @@ function render() {
     const color = z.side === 'sell' ? 'rgba(239,83,80,.85)' : 'rgba(38,166,154,.85)';
     priceLines.push(series.createPriceLine({ price: z.hi, color, lineWidth: 1, lineStyle: 2, axisLabelVisible: false, title: '' }));
     priceLines.push(series.createPriceLine({ price: z.lo, color, lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: `${z.side === 'sell' ? 'Sell' : 'Buy'} ${(r => r.h4 < 1 ? '<1' : r.h4.toFixed(0))(zoneReach(S, z))}%/${zoneReach(S, z).h24.toFixed(0)}%` }));
+  });
+  ['sell', 'buy'].forEach(sd => {
+    const z = S.zonesH1.filter(x => x.side === sd).sort((a, b) => a.dist - b.dist)[0]; if (!z) return;
+    const color = sd === 'sell' ? 'rgba(255,123,114,.9)' : 'rgba(86,211,100,.9)';
+    priceLines.push(series.createPriceLine({ price: z.hi, color, lineWidth: 2, lineStyle: 3, axisLabelVisible: false, title: '' }));
+    priceLines.push(series.createPriceLine({ price: z.lo, color, lineWidth: 2, lineStyle: 3, axisLabelVisible: true, title: `H1 ${sd === 'sell' ? 'ต้าน' : 'รับ'}` }));
   });
   renderSignals();
 }
@@ -871,6 +967,20 @@ $('zones').addEventListener('click', e => {
   closed ? S.zonesClosed.add(el.dataset.k) : S.zonesClosed.delete(el.dataset.k);
   if (!closed) S.zonesAllClosed = false;
   syncZonesBtn();
+});
+$('btnZonesH1').onclick = () => {
+  const els = [...document.querySelectorAll('#zonesH1 .zone')], anyOpen = els.some(el => !el.classList.contains('closed'));
+  S.zonesH1AllClosed = anyOpen;
+  els.forEach(el => { el.classList.toggle('closed', anyOpen); anyOpen ? S.zonesH1Closed.add(el.dataset.k) : S.zonesH1Closed.delete(el.dataset.k); });
+  if (!anyOpen) S.zonesH1Closed.clear();
+  syncZonesH1Btn();
+};
+$('zonesH1').addEventListener('click', e => {
+  const top = e.target.closest('.zone .top'); if (!top) return;
+  const el = top.parentElement, closed = el.classList.toggle('closed');
+  closed ? S.zonesH1Closed.add(el.dataset.k) : S.zonesH1Closed.delete(el.dataset.k);
+  if (!closed) S.zonesH1AllClosed = false;
+  syncZonesH1Btn();
 });
 $('btnSys').onclick = () => {
   const els = [...document.querySelectorAll('#sysPanel .cb')], anyOpen = els.some(el => !el.classList.contains('closed'));
