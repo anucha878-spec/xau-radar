@@ -87,6 +87,8 @@ body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bot
 .tps{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:5px}
 .tpc{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:3px 5px;font-size:11px;display:flex;flex-direction:column;align-items:center;line-height:1.35}
 .tpc b:first-child{color:var(--muted)}
+.stars{color:var(--gold);letter-spacing:1px;font-size:14px;white-space:nowrap}
+.stars .off{color:var(--line)}
 .ph{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .ph button{font-size:12px;padding:3px 9px}
 .zone .top{cursor:pointer;user-select:none}
@@ -137,6 +139,7 @@ body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bot
   </div>
   <p class="note">
     แอปนี้อ่านอย่างเดียว ไม่ส่งออเดอร์ · ข้อมูลจาก Twelve Data + gold-api.com (ราคาอาจต่างจากโบรกเล็กน้อย) ·
+    ★ = Rating ความแข็งของโซน 1–5 (เทียบกับโซนในอดีต: ★5 = แข็งที่สุด 20%) — ความแข็งของโซนไม่ได้เพิ่ม % ชนะใน backtest ·
     % ถึงโซน = สัดส่วนครั้งในอดีต (2022-09→2026-10) ที่ราคาวิ่งไปถึงระยะเท่านี้ (วัดเป็น ATR H1) ภายใน 4 ชม. / 24 ชม. — ป้ายบนกราฟ = 4ชม./24ชม. ·
     ทดสอบแล้ว: ตารางจากปี 2022–24 ทายปี 2025–26 คลาดไม่เกิน ~5% · ถึงโซนไม่ได้แปลว่าจะกลับตัว
   </p>
@@ -157,6 +160,8 @@ const CFG = {
   ZONE_GAP_ATR_H1: 1,        // โซนฝั่งเดียวกันต้องห่างกัน ≥ 1×ATR(H1)
   // โซนกลับตัว H1 (กรอบใหญ่ — ดูประกอบ ยังไม่ผ่าน backtest ไม่ผูกกับระบบเทรด)
   H1Z: { RANGE_ATR_D1: 1.5, TOL_ATR_H4: 0.4, GAP_ATR_H4: 1, MIN_SCORE: 3, MAX_EACH_SIDE: 3 },
+  // Rating ดาว 1–5 ของโซน: เกณฑ์ = เปอร์เซ็นไทล์ 20/40/60/80 ของคะแนนโซนย้อนหลัง ~1.2 ปี (backtest/zone_score_quantiles.js)
+  RATING: { M15: [7, 10, 13, 17.5], H1: [7, 10.5, 14, 18] },
   ZONE_METHOD: 'chain',      // 'chain' = ไล่รวมทีละระดับ (ระบบเทรดผ่าน backtest ด้วยวิธีนี้) · 'density' = จุดกระจุกตัว: โซนตรงกันข้ามแหล่งราคามากกว่า แต่ backtest ระบบแย่ลง (PF 1.18→1.07)
   ZONE_BW_ATR_H1: 0.3,       // density: ความกว้าง kernel (σ) = 0.3×ATR(H1)
   ZONE_CORE: 0.6,            // density: สมาชิกโซน = ระดับที่อยู่ในช่วงความหนาแน่น ≥ 60% ของยอด
@@ -414,6 +419,10 @@ function buildZonesH1(S) {
   S.zonesH1 = [...above, ...below];
   S.insideZoneH1 = zones.find(z => z.lo <= price && z.hi >= price) || null;
 }
+
+// คะแนนโซน → ดาว 1–5 (★5 = แข็งที่สุด 20% ของโซนในอดีต)
+const rating = (score, tf) => 1 + CFG.RATING[tf].filter(t => score >= t).length;
+const starsHtml = n => `<span class="stars" title="Rating ${n}/5">${'★'.repeat(n)}<span class="off">${'☆'.repeat(5 - n)}</span></span>`;
 
 function detectSignals(S) {
   const b = S.bars.M15, n = b.length - 2; // แท่งปิดล่าสุด (แท่งสุดท้ายยังไม่ปิด)
@@ -674,13 +683,13 @@ function render() {
     const L = tpLadder(S, z.side, z.entry, z.sl), closed = S.zonesClosed.has(zkey(z));
     return `<div class="zone ${z.side}${closed ? ' closed' : ''}" data-k="${zkey(z)}"><div class="top" title="คลิกเพื่อย่อ/ขยาย">
       <span class="rng mono ${z.side === 'sell' ? 'down' : 'up'}"><span class="chev">▼</span>${z.side === 'sell' ? '🔴 Sell' : '🟢 Buy'} ${fmt(z.lo)}–${fmt(z.hi)}<span class="sum mono">TP1R ${L.levels[0].p.toFixed(0)}%</span></span>
-      <span class="mono" style="font-weight:700;color:${rc(zr(z).h4)}">ถึง ${pf(zr(z).h4)}</span></div>
+      ${starsHtml(rating(z.score, 'M15'))}</div>
       <div class="zbody">
       <div class="meta">ราคามาถึงโซน: <b class="mono" style="color:${rc(zr(z).h4)}">4 ชม. ${pf(zr(z).h4)}</b> · <b class="mono" style="color:${rc(zr(z).h24)}">24 ชม. ${pf(zr(z).h24)}</b> · ห่าง ${zr(z).d.toFixed(1)}×ATR H1 (ราคาต้องวิ่ง${{ with: 'ตามเทรนด์ D', against: 'สวนเทรนด์ D', range: 'ในกรอบ D' }[zr(z).reg]}มาหาโซน)</div>
       <div class="meta">${z.src.join(' · ')}</div>
       <div class="plan mono">เข้า ~${fmt(z.entry)} · SL ${fmt(z.sl)}${z.liq != null ? ` (พ้น liquidity ${fmt(z.liq)})` : ''} · 1R = $${Math.abs(z.entry - z.sl).toFixed(1)}</div>
       ${tpHtml(L)}
-      <div class="meta">ห่าง $${z.dist.toFixed(1)} · ${alignTag(z)}</div></div></div>`;
+      <div class="meta">Rating ${rating(z.score, 'M15')}/5 (คะแนน ${z.score.toFixed(1)}) · ห่าง $${z.dist.toFixed(1)} · ${alignTag(z)}</div></div></div>`;
   };
   const sells = S.zones.filter(z => z.side === 'sell').sort((a, b) => b.lo - a.lo), buys = S.zones.filter(z => z.side === 'buy');
   $('zones').innerHTML = (sells.map(zhtml).join('') || '<div class="empty">ไม่มีโซน Sell ในระยะ</div>') +
@@ -692,12 +701,12 @@ function render() {
   const zh1 = z => {
     const r = zoneReach(S, z), k = 'h1' + z.side + Math.round(z.lo), closed = S.zonesH1Closed.has(k);
     return `<div class="zone ${z.side}${closed ? ' closed' : ''}" data-k="${k}"><div class="top" title="คลิกเพื่อย่อ/ขยาย">
-      <span class="rng mono ${z.side === 'sell' ? 'down' : 'up'}"><span class="chev">▼</span>${z.side === 'sell' ? '🔴 แนวต้าน' : '🟢 แนวรับ'} ${fmt(z.lo)}–${fmt(z.hi)}<span class="sum mono">${'★'.repeat(z.stars)}</span></span>
-      <span class="mono" style="font-weight:700;color:${rc(r.h24)}">ถึง ${pf(r.h24)}<span class="sum">/24ชม.</span></span></div>
+      <span class="rng mono ${z.side === 'sell' ? 'down' : 'up'}"><span class="chev">▼</span>${z.side === 'sell' ? '🔴 แนวต้าน' : '🟢 แนวรับ'} ${fmt(z.lo)}–${fmt(z.hi)}</span>
+      ${starsHtml(rating(z.score, 'H1'))}</div>
       <div class="zbody">
       <div class="meta">ราคามาถึงโซน: <b class="mono" style="color:${rc(r.h4)}">4 ชม. ${pf(r.h4)}</b> · <b class="mono" style="color:${rc(r.h24)}">24 ชม. ${pf(r.h24)}</b> · ห่าง $${z.dist.toFixed(1)} (${r.d.toFixed(1)}×ATR H1)</div>
       <div class="meta">${z.src.join(' · ')}</div>
-      <div class="meta">คะแนน ${z.score.toFixed(1)} · ${z.side === 'sell' ? 'ถ้ามาถึง: ดูสัญญาณ Sell / จุดเก็บกำไรของ Buy' : 'ถ้ามาถึง: ดูสัญญาณ Buy / จุดเก็บกำไรของ Sell'}</div></div></div>`;
+      <div class="meta">Rating ${rating(z.score, 'H1')}/5 (คะแนน ${z.score.toFixed(1)}) · ${z.side === 'sell' ? 'ถ้ามาถึง: ดูสัญญาณ Sell / จุดเก็บกำไรของ Buy' : 'ถ้ามาถึง: ดูสัญญาณ Buy / จุดเก็บกำไรของ Sell'}</div></div></div>`;
   };
   const h1s = S.zonesH1.filter(z => z.side === 'sell').sort((a, b) => b.lo - a.lo), h1b = S.zonesH1.filter(z => z.side === 'buy');
   $('zonesH1').innerHTML = (h1s.map(zh1).join('') || '<div class="empty">ไม่มีแนวต้าน H1 ในระยะ</div>') +
@@ -745,13 +754,13 @@ function render() {
   S.zones.forEach(z => {
     const color = z.side === 'sell' ? 'rgba(239,83,80,.85)' : 'rgba(38,166,154,.85)';
     priceLines.push(series.createPriceLine({ price: z.hi, color, lineWidth: 1, lineStyle: 2, axisLabelVisible: false, title: '' }));
-    priceLines.push(series.createPriceLine({ price: z.lo, color, lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: `${z.side === 'sell' ? 'Sell' : 'Buy'} ${(r => r.h4 < 1 ? '<1' : r.h4.toFixed(0))(zoneReach(S, z))}%/${zoneReach(S, z).h24.toFixed(0)}%` }));
+    priceLines.push(series.createPriceLine({ price: z.lo, color, lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: `${z.side === 'sell' ? 'Sell' : 'Buy'} ${'★'.repeat(rating(z.score, 'M15'))}` }));
   });
   ['sell', 'buy'].forEach(sd => {
     const z = S.zonesH1.filter(x => x.side === sd).sort((a, b) => a.dist - b.dist)[0]; if (!z) return;
     const color = sd === 'sell' ? 'rgba(255,123,114,.9)' : 'rgba(86,211,100,.9)';
     priceLines.push(series.createPriceLine({ price: z.hi, color, lineWidth: 2, lineStyle: 3, axisLabelVisible: false, title: '' }));
-    priceLines.push(series.createPriceLine({ price: z.lo, color, lineWidth: 2, lineStyle: 3, axisLabelVisible: true, title: `H1 ${sd === 'sell' ? 'ต้าน' : 'รับ'}` }));
+    priceLines.push(series.createPriceLine({ price: z.lo, color, lineWidth: 2, lineStyle: 3, axisLabelVisible: true, title: `H1 ${sd === 'sell' ? 'ต้าน' : 'รับ'} ${'★'.repeat(rating(z.score, 'H1'))}` }));
   });
   renderSignals();
 }
