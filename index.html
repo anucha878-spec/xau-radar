@@ -7,10 +7,10 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="XAU Radar">
+<meta name="apple-mobile-web-app-title" content="XAU SMC">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
-<title>XAU Trend Radar</title>
+<title>XAU SMC Radar</title>
 <link rel="icon" href="icon-192.png">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
@@ -100,11 +100,32 @@ body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bot
 .chev{color:var(--muted);font-size:11px;margin-right:4px;display:inline-block;transition:transform .15s}
 .cb.closed .chev{transform:rotate(-90deg)}
 .cb.closed .cbody{display:none}
+.ck{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:2px 10px;font-size:12px;margin-top:5px}
+.ck .ok{color:var(--up)} .ck .no{color:var(--down)} .ck .na{color:var(--muted)}
+.lvls{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:6px}
+.lvls span{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:3px 5px;font-size:11px;display:flex;flex-direction:column;align-items:center;line-height:1.35}
+.lvls b{color:var(--muted);font-weight:500}
+.hz{display:flex;justify-content:space-between;gap:8px;font-size:12px;padding:4px 8px;border-left:3px solid var(--line);margin-bottom:4px;background:var(--panel2);border-radius:4px}
+.hz.sell{border-left-color:var(--down)} .hz.buy{border-left-color:var(--up)}
+.hist{font-size:12px;color:var(--muted);line-height:1.7}
+#ftPanel .ftb{display:flex;gap:6px;flex-wrap:wrap}
+#ftPanel button.on{border-color:var(--gold);color:var(--gold)}
+.ftk{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px;margin-bottom:10px}
+.ftk div{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:11px;color:var(--muted)}
+.ftk b{display:block;font-size:17px;color:var(--text);font-family:'JetBrains Mono',monospace;font-weight:600}
+.ftk b.up{color:var(--up)} .ftk b.down{color:var(--down)}
+.ftwrap{overflow-x:auto;max-height:460px;overflow-y:auto;border:1px solid var(--line);border-radius:8px}
+.fttab{border-collapse:collapse;width:100%;font-size:12px;white-space:nowrap}
+.fttab th{position:sticky;top:0;background:var(--panel2);color:var(--muted);font-weight:500;text-align:right;padding:5px 8px;border-bottom:1px solid var(--line)}
+.fttab td{padding:4px 8px;border-bottom:1px solid var(--line);text-align:right;font-family:'JetBrains Mono',monospace}
+.fttab th:first-child,.fttab td:first-child,.fttab td.l,.fttab th.l{text-align:left}
+.ftsub{font-size:12px;color:var(--muted);margin:10px 0 4px}
+#ftEq{width:100%;height:90px;display:block;background:var(--panel2);border:1px solid var(--line);border-radius:8px}
 </style>
 </head>
 <body>
 <header>
-  <h1>XAU Trend Radar</h1>
+  <h1>XAU SMC Radar</h1>
   <div><span id="price" class="mono">—</span> <span id="spread" class="mono note"></span></div>
   <button id="btnNotify">🔔 เปิดแจ้งเตือน</button>
   <button id="btnSettings" title="ตั้งค่า">⚙️</button>
@@ -117,7 +138,7 @@ body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bot
   <div class="row"><button id="keySave">บันทึก &amp; โหลดข้อมูล</button><button id="ladderReset">ล้างประวัติบันได</button><button id="settingsClose">ปิด</button></div>
   <div class="note" id="settingsNote" style="margin-top:10px"></div>
   <div class="note" style="margin-top:10px">ข้อมูล: แท่งเทียนจาก Twelve Data (XAU/USD spot) · ราคาสดจาก gold-api.com ·
-  แจ้งเตือนทำงานเฉพาะตอนเปิดแอปไว้ · โควตาฟรี 800 ครั้ง/วัน แอปใช้ ~315 ครั้ง/วันถ้าเปิดค้างทั้งวัน (เปิดแอป 3 ครั้ง + M15 ทุก 5 นาที + H1 ทุกชั่วโมง)</div>
+  แจ้งเตือนทำงานเฉพาะตอนเปิดแอปไว้ · โควตาฟรี 800 ครั้ง/วัน แอปใช้ ~315 ครั้ง/วันถ้าเปิดค้างทั้งวัน (เปิดแอป 3 ครั้ง + M5 ทุก 5 นาที + H1 ทุกชั่วโมง)</div>
 </div></div>
 <main>
   <div class="bias" id="bias">กำลังวิเคราะห์…</div>
@@ -127,21 +148,19 @@ body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bot
       <div id="chart"></div>
       <div id="srsi"></div>
       <div class="srsi-lbl mono" id="srsiLbl"></div>
-      <p class="note">กราฟ M15 (เวลาไทย) · เส้นแดง = โซน Sell · เส้นเขียว = โซน Buy · ลูกศร = สัญญาณระบบที่แจ้งจริง (✓ TP / ✗ SL)</p>
+      <p class="note">กราฟ M5 (เวลาไทย) · ม่วง = กล่อง OB · ฟ้า = FVG · ทองประ = Fibo 61.8/70.5 · ทองทึบ = จุดตั้ง Limit · แดง = SL · เขียว = TP1/TP2 · เส้นประหนา = โซนใหญ่ H1/H4 ที่ใกล้สุด · ● BOS = จุดทำลายโครงสร้าง · ลูกศร = ไม้ที่เข้าจริง</p>
     </div>
     <div style="display:grid;gap:16px;align-content:start">
-      <div class="panel" style="border-color:var(--gold)" id="sysPanel"><h2 class="ph">📋 ระบบเทรด <button id="btnSys" aria-expanded="true" title="ย่อ/ขยายรายละเอียดทุกส่วน">▾ ย่อทั้งหมด</button></h2><div id="ladder"></div><div id="system"></div></div>
-      <div class="panel"><h2>⚡ สัญญาณกลับตัว M15 <span class="note">(ข้อมูลประกอบ — ไม่มี edge ไม่แจ้งเตือน)</span></h2><div id="signals"><div class="empty">ยังไม่มีสัญญาณ</div></div></div>
-      <div class="panel"><h2 class="ph">🧭 โซนกลับตัว H1 <button id="btnZonesH1" aria-expanded="true" title="ย่อ/ขยายรายละเอียดทุกโซน H1">▾ ย่อทั้งหมด</button></h2><div id="zonesH1"></div>
-        <div class="note" style="margin-top:6px">กรอบใหญ่สำหรับดูทิศ/เป้าหมาย — ยังไม่ผ่าน backtest ไม่ผูกกับระบบเทรด</div></div>
-      <div class="panel"><h2 class="ph">🎯 โซนกลับตัว M15 <button id="btnZones" aria-expanded="true" title="ย่อ/ขยายรายละเอียดทุกโซน">▾ ย่อทั้งหมด</button></h2><div id="zones"></div></div>
+      <div class="panel" style="border-color:var(--gold)" id="sysPanel"><h2 class="ph">📋 ระบบ SMC M5 <button id="btnSys" aria-expanded="true" title="ย่อ/ขยายรายละเอียดทุกส่วน">▾ ย่อทั้งหมด</button></h2><div id="ladder"></div><div id="system"></div><div id="sysSigs"></div></div>
+      <div class="panel"><h2>🧱 โซนใหญ่ H1 / H4 <span class="note">(Bearish/Bullish OB ที่ยังไม่ถูกใช้ + EQH/EQL ที่ยังไม่ถูกกวาด)</span></h2><div id="htf"></div></div>
     </div>
   </div>
+  <div class="panel" id="ftPanel"><h2 class="ph">📜 History Forward Test <span class="ftb"><button data-ft="all" onclick="setFtSide('all')">ทั้งหมด</button><button data-ft="buy" onclick="setFtSide('buy')">Buy</button><button data-ft="sell" onclick="setFtSide('sell')">Sell</button><button data-ft="x3" onclick="setFtSide('x3')" title="โหมดทดลอง Sell SL $3">🧪 Sell $3</button><button onclick="ftCsv()" title="ดาวน์โหลดประวัติเป็น CSV">⬇ CSV</button></span></h2><div id="ftHist"><div class="empty">กำลังโหลด…</div></div></div>
   <p class="note">
     แอปนี้อ่านอย่างเดียว ไม่ส่งออเดอร์ · ข้อมูลจาก Twelve Data + gold-api.com (ราคาอาจต่างจากโบรกเล็กน้อย) ·
-    ★ = Rating ความแข็งของโซน 1–5 (เทียบกับโซนในอดีต: ★5 = แข็งที่สุด 20%) — ความแข็งของโซนไม่ได้เพิ่ม % ชนะใน backtest ·
-    % ถึงโซน = สัดส่วนครั้งในอดีต (2022-09→2026-10) ที่ราคาวิ่งไปถึงระยะเท่านี้ (วัดเป็น ATR H1) ภายใน 4 ชม. / 24 ชม. — ป้ายบนกราฟ = 4ชม./24ชม. ·
-    ทดสอบแล้ว: ตารางจากปี 2022–24 ทายปี 2025–26 คลาดไม่เกิน ~5% · ถึงโซนไม่ได้แปลว่าจะกลับตัว
+    ระบบ: Bias จาก H1 (H4 ต้องไม่สวนชัด) → M5 ทะลุ swing ด้วยแท่งตัวเต็ม (BOS/CHoCH) → OB (แท่งสวนทางแท่งสุดท้าย) + FVG เหนือ/ใต้ OB + Fibo 61.8–70.5% ทับกล่อง OB →
+    ตั้ง Limit · SL พ้น OB $2 · TP1 = Fibo 0% (ปิด 50% + บังทุน) · TP2 = Fibo −0.27 หรือ EQH/EQL ถัดไป ·
+    ข้ามเมื่อ: EQL/EQH หน้าโซน · ย่อแรงแบบ V · โซนถูกใช้แล้ว · SL &gt; $5 หรือ R:R &lt; 1.5 · ติดโซนใหญ่ H1/H4 · 06:00–12:00 / 19:15–20:30 · ก่อนข่าวแดง 30 นาที
   </p>
 </main>
 
@@ -152,46 +171,37 @@ const CFG = {
   POLL_FULL_MS: 20000,       // คำนวณใหม่ทั้งหมด
   AUTO_RELOAD_MIN: 5,        // โหลดหน้าใหม่ทั้งหน้าทุกกี่นาที (คงสถานะย่อ/ขยาย + ตำแหน่ง scroll)
   TZ: 7 * 3600,              // เวลาไทย
-  PIVOT: { D1: 2, H4: 3, H1: 3, M15: 3 },   // fractal ซ้าย/ขวา
+  PIVOT: { D1: 2, H4: 3, H1: 3, M5: 3 },   // fractal ซ้าย/ขวา (ใช้กับ Trend)
   ADX_SIDEWAY: 18,           // ADX ต่ำกว่านี้ = ไม่มีเทรนด์
-  ZONE_RANGE_ATR_H4: 3,      // หาโซนในระยะ ±3×ATR(H4) จากราคา
-  ZONE_MAX_EACH_SIDE: 3,
-  ZONE_MIN_SCORE: 2.5,
-  ZONE_GAP_ATR_H1: 1,        // โซนฝั่งเดียวกันต้องห่างกัน ≥ 1×ATR(H1)
-  // โซนกลับตัว H1 (กรอบใหญ่ — ดูประกอบ ยังไม่ผ่าน backtest ไม่ผูกกับระบบเทรด)
-  H1Z: { RANGE_ATR_D1: 1.5, TOL_ATR_H4: 0.4, GAP_ATR_H4: 1, MIN_SCORE: 3, MAX_EACH_SIDE: 3 },
-  // Rating ดาว 1–5 ของโซน: เกณฑ์ = เปอร์เซ็นไทล์ 20/40/60/80 ของคะแนนโซนย้อนหลัง ~1.2 ปี (backtest/zone_score_quantiles.js)
-  RATING: { M15: [7, 10, 13, 17.5], H1: [7, 10.5, 14, 18] },
-  ZONE_METHOD: 'chain',      // 'chain' = ไล่รวมทีละระดับ (ระบบเทรดผ่าน backtest ด้วยวิธีนี้) · 'density' = จุดกระจุกตัว: โซนตรงกันข้ามแหล่งราคามากกว่า แต่ backtest ระบบแย่ลง (PF 1.18→1.07)
-  ZONE_BW_ATR_H1: 0.3,       // density: ความกว้าง kernel (σ) = 0.3×ATR(H1)
-  ZONE_CORE: 0.6,            // density: สมาชิกโซน = ระดับที่อยู่ในช่วงความหนาแน่น ≥ 60% ของยอด
-  ZONE_BOUNDS: 'members',    // density: 'members' = ขอบโซนจาก swing สุดขอบของสมาชิก (liquidity) · 'core' = ขอบตามความหนาแน่น
-  SIGNAL_LOOKBACK: 8,        // ตรวจสัญญาณย้อนหลังกี่แท่ง M15 ที่ปิดแล้ว
-  SIGNAL_COOLDOWN: 8,        // โซนเดิม ฝั่งเดิม ห้ามซ้ำภายในกี่แท่ง
   WEIGHT: { D1: 3, H4: 2, H1: 1 },
-  // Stoch RSI บน M15 (smoothK, smoothD, RSI length, Stoch length) — ค่าเดียวกับ TradingView ของผู้ใช้
-  // backtest 2026-10-02: ไม่มีชุดค่า/เงื่อนไขใดช่วยสัญญาณกลับตัวได้คงที่ (ผล TRAIN/TEST กลับด้าน) → ใช้ดูประกอบ ไม่ใช่เงื่อนไขระบบ
   STOCHRSI: { K: 3, D: 3, RSI: 14, STOCH: 14, OB: 80, OS: 20 },
-  // % ที่ราคาจะไปถึงระยะ d×ATR(H1) ภายใน 4/24 ชม. (ข้อมูลจริง 2022-09→2026-10, สร้างด้วย backtest/touch_table.js)
-  // key = h4|h24 + ทิศเทียบเทรนด์ D (with/against/range) · ค่าที่ d = 0.25, 0.5, … 6.0
-  REACH: {"h4|against": [80.6, 63.8, 49.8, 38.5, 30.2, 23.7, 18.6, 14.7, 11.7, 9.2, 7.4, 6, 4.9, 3.9, 3.2, 2.7, 2.3, 1.9, 1.6, 1.3, 1.1, 0.9, 0.7, 0.6], "h4|with": [83.3, 67, 52.5, 40.6, 31.1, 23.7, 18.2, 14, 10.9, 8.5, 6.7, 5.3, 4.4, 3.6, 3, 2.5, 2.1, 1.7, 1.5, 1.3, 1, 0.9, 0.8, 0.6], "h24|against": [92.6, 85.8, 79.4, 72.8, 67.4, 62.5, 57.6, 52.8, 48.5, 44.2, 40.1, 36.3, 32.5, 29.1, 26, 23.3, 20.9, 18.6, 16.6, 14.8, 13.2, 11.8, 10.5, 9.4], "h24|with": [94, 88.2, 82.3, 76.8, 71.2, 65.8, 60.8, 56.1, 51.8, 47.4, 43, 39.2, 35.9, 33.1, 30.3, 27.6, 25.2, 22.8, 20.5, 18.4, 16.5, 14.8, 13.3, 12.1], "h4|range": [81.8, 65, 50.5, 38.8, 29.7, 22.8, 17.4, 13.4, 10.6, 8.4, 6.8, 5.6, 4.6, 3.8, 3.1, 2.6, 2.1, 1.8, 1.5, 1.3, 1.1, 0.9, 0.8, 0.7], "h24|range": [93.6, 87.4, 81.4, 75.1, 69.6, 64.4, 59, 54.1, 49.4, 44.8, 40.9, 37.3, 33.8, 30.5, 27.7, 25.1, 22.8, 20.5, 18.5, 16.6, 14.9, 13.3, 11.9, 10.7]},
-  REACH_STEP: 0.25,
-  // % ที่ราคาจะไปถึง TP 1R/2R/4R/8R ก่อนโดน SL (SL liq, ภายใน 24 ชม.) — backtest/tp_reach_table.py
-  TP_LEVELS: [1, 2, 4, 8],
-  TPREACH: {"buy_off": {"n": 2170, "p": [47.6, 26.3, 8.1, 1.2]}, "buy_on": {"n": 852, "p": [53.6, 32.5, 12.9, 1.3]}, "sell_off": {"n": 1703, "p": [46.6, 27.0, 9.6, 0.9]}, "sell_on": {"n": 148, "p": [58.1, 31.1, 12.8, 2.7]}, "sell_on_nosweep": {"n": 914, "p": [46.4, 24.9, 8.4, 1.2]}},
-  // % ชนะจาก backtest 2022-09→2026-10 (TP 1R, SL liq) แยก ฝั่ง_สถานะ_ดาว — สร้างด้วย backtest/winrate_table.py
-  WINRATE: {"buy_off_1": {"w": 45.8, "n": 83}, "buy_off_2": {"w": 43.8, "n": 192}, "buy_off_3": {"w": 47.9, "n": 1895}, "buy_off_all": {"w": 47.5, "n": 2170}, "buy_on_1": {"w": 58.0, "n": 100}, "buy_on_2": {"w": 52.9, "n": 174}, "buy_on_3": {"w": 52.9, "n": 578}, "buy_on_all": {"w": 53.5, "n": 852}, "sell_off_1": {"w": 41.1, "n": 158}, "sell_off_2": {"w": 46.6, "n": 247}, "sell_off_3": {"w": 47.1, "n": 1298}, "sell_off_all": {"w": 46.4, "n": 1703}, "sell_on_1": {"w": 0.0, "n": 1}, "sell_on_2": {"w": 40.0, "n": 15}, "sell_on_3": {"w": 60.6, "n": 132}, "sell_on_all": {"w": 58.1, "n": 148}, "sell_on_nosweep_1": {"w": 44.1, "n": 34}, "sell_on_nosweep_2": {"w": 50.0, "n": 104}, "sell_on_nosweep_3": {"w": 46.0, "n": 776}, "sell_on_nosweep_all": {"w": 46.4, "n": 914}},
-  WINRATE_MIN_N: 150,        // กลุ่มดาวที่มีไม้น้อยกว่านี้ ใช้ค่ารวมของสถานะนั้นแทน
-  // ระบบเทรดที่ผ่าน backtest (2026-10-02)
-  SYS: {
-    SELL_TP_R: 1,            // Sell: สัญญาณกลับตัว + Sweep + D และ H4 ไม่ใช่ขาขึ้น → TP 1R
-    BUY_TP_R: 1,             // Buy: สัญญาณกลับตัว Buy ของแอป + D และ H4 ขาขึ้น → TP 1R
-    H1_TP_MIN_R: 0.3,        // ถ้าโซน H1 ฝั่งตรงข้ามขวางก่อนถึง TP (และไกล ≥0.3R) → TP ที่ขอบใกล้ของโซน H1 (backtest: win 55.5→60.1%, PF 1.18 เท่าเดิม)
-    SWEEP_LOOKBACK: 30,      // swing high ล่าสุดภายในกี่แท่ง M15
-    LIQ_RANGE_ATR_H1: 2,     // หา swing (liquidity) เลยโซนไม่เกิน 2×ATR(H1)
-    LIQ_BUF_ATR_H1: 0.3,     // เผื่อ sweep เลย swing อีก 0.3×ATR(H1)
-    LIQ_FALLBACK_ATR_H1: 1,  // ไม่เจอ swing → SL = ขอบ + 1×ATR(H1)
+  // ระบบ SMC M5 (2026-11-18 เริ่มที่ M5 · 2026-11-19 เปลี่ยนเป็น M5)
+  SMC: {
+    TF: 'M5', SEC: 300,      // TF จังหวะเข้า (เปลี่ยนจาก M5 เมื่อ 2026-11-19)
+    PIVOT: 3,                // swing M5 = fractal 3 แท่งซ้าย/ขวา (ยืนยันเมื่อแท่งขวาปิดครบ)
+    DISP_BODY: 0.6,          // แท่ง Displacement: เนื้อเทียน ≥ 60% ของแท่ง
+    DISP_ATR: 1.0,           //   และความยาวแท่ง ≥ 1×ATR(M5)
+    FIB_A: 0.618, FIB_B: 0.705, FIB_EXT: 0.27,   // POI = Fibo 61.8–70.5% · TP2 = Fibo −0.27
+    SL_BUF: 2.0,             // SL พ้นกล่อง OB $2.0 (200 จุด)
+    MAX_RISK: 5,             // ระยะ Entry→SL เกิน $5 → ข้าม
+    MIN_RR: 1.5,             // R:R ถึง TP1 ต่ำกว่า 1.5 → ข้าม
+    PARTIAL: 0.5,            // ปิดที่ TP1 50% แล้วเลื่อน SL บังทุน
+    EXPIRE_BARS: 288,        // setup ที่ราคาไม่มาถึงใน 24 ชม. (288 แท่ง M5) → ยกเลิก
+    MAX_HOLD_BARS: 288,      // ถือไม่เกิน 24 ชม. หลังเข้า
+    EQ_LOOKBACK: 1200,       // หา EQH/EQL ถัดไปย้อนหลัง 1,200 แท่ง M5 (100 ชม. เท่าเดิม)
+    BOUNCE_ATR: 1.0,         // Mitigated: แตะ FVG แล้วเด้งขึ้น ≥ 1×ATR(M5) (ไม่ทำ High ใหม่) แล้วกลับมา
+    VSHAPE_N: 3, VSHAPE_MIN: 2,   // ย่อแรงแบบ V: แท่งตัวเต็มสวนทาง ≥ 2 ใน 3 แท่งล่าสุด
+    EQ_TOL_ATR: 0.25,        // EQH/EQL M5: swing 2 จุดห่างกันไม่เกิน 0.25×ATR(M5)
+    HTF_PIVOT: 3,            // swing ของ H1/H4 สำหรับ OB / EQH / EQL
+    HTF_EQ_TOL_ATR: 0.15,    // EQH/EQL H1/H4: ห่างกันไม่เกิน 0.15×ATR ของ TF นั้น
+    HTF_MAX_AGE: { H1: 500 * 3600, H4: 400 * 14400 },   // ใช้โซนใหญ่ที่เกิดไม่เกิน 500 แท่ง H1 / 400 แท่ง H4
+    OBST_PAD_R: 0.5,         // โซนใหญ่ฝั่งตรงข้ามอยู่ระหว่าง Entry ถึง TP1 + 0.5R → ข้าม
+    SESSION_BLOCK: [[6 * 60, 12 * 60, 'ตลาดเอเชีย 06:00–12:00'], [19 * 60 + 15, 20 * 60 + 30, 'เปิดตลาดอเมริกา/ข่าว 19:15–20:30']],   // เวลาไทย
+    NEWS_BEFORE_MIN: 30, NEWS_AFTER_MIN: 15,   // ข่าวแดง USD: ห้ามตั้ง Limit 30 นาทีก่อน ถึง 15 นาทีหลัง
   },
+  // 🧪 โหมดทดลอง (2026-11-19, backtest/summary-m5-entry-sltp-2026-11-19.md): Sell ที่โครงสร้าง (FVG + Fibo ทับ OB) และ Bias ผ่าน
+  // ไม่ใช้ตัวกรองอื่น · Limit จุดเดียวกับระบบหลัก · SL คงที่ $3 · TP1 Fibo 0 ปิด 50% + บังทุน · TP2 เดิม · lot คงที่ (ไม่ใช้บันได)
+  EXP: { ON: true, SIDE: 'sell', SL_USD: 3, LOT: 0.02, NEED: ['fvg', 'poi', 'bias', 'h4'], TAG: 'x3', NAME: '🧪 ทดลอง Sell SL $3' },
 };
 
 /* INDICATORS */
@@ -299,307 +309,225 @@ function analyzeTrend(tf, b) {
   return { tf, label, dir, cls, score, adx: ax, atr: at[n], e20: e20[n], e50: e50[n], e200: e200[n], hs, ls, reasons, last };
 }
 
-function buildZones(S) {
-  const B = S.bars, price = S.price, atrH1 = S.trend.H1.atr, atrH4 = S.trend.H4.atr, atrM15 = S.m15atr;
-  const lv = [];
-  const add = (p, w, src) => lv.push({ p, w, src });
-  const take = (tf, k, back, w, name) => {
-    const b = B[tf], { hs, ls } = pivots(b, k), from = b.length - back;
-    hs.filter(x => x.i >= from).forEach(x => add(x.p, w, `${name} High`));
-    ls.filter(x => x.i >= from).forEach(x => add(x.p, w, `${name} Low`));
-  };
-  take('M15', CFG.PIVOT.M15, 300, 1, 'M15');
-  take('H1', CFG.PIVOT.H1, 200, 2, 'H1');
-  take('H4', 2, 120, 3, 'H4');
-  const D = B.D1, pd = D[D.length - 2];
-  add(pd.h, 3, 'High เมื่อวาน'); add(pd.l, 3, 'Low เมื่อวาน'); add(D[D.length - 1].o, 1, 'Open วันนี้');
-  add(S.trend.H4.e50, 1.5, 'EMA50 H4'); add(S.trend.H4.e200, 1.5, 'EMA200 H4'); add(S.trend.H1.e200, 1, 'EMA200 H1');
-  for (let r = Math.floor((price - 200) / 50) * 50; r < price + 200; r += 50) add(r, 1, `เลขกลม ${r}`);
-
-  const range = CFG.ZONE_RANGE_ATR_H4 * atrH4, tol = Math.max(0.4 * atrH1, 3);
-  const pts = lv.filter(x => Math.abs(x.p - price) <= range).sort((a, b) => a.p - b.p);
-  const mkZone = (items, lo, hi) => {
-    const score = items.reduce((s, x) => s + x.w, 0), srcCount = {};
-    items.forEach(x => { srcCount[x.src] = (srcCount[x.src] || 0) + 1; });
-    const src = Object.entries(srcCount).map(([k, v]) => v > 1 ? `${k} ×${v}` : k);
-    if (hi - lo < 1) { const m = (lo + hi) / 2; lo = m - 0.5; hi = m + 0.5; }
-    return { lo, hi, mid: (lo + hi) / 2, score, src, stars: score >= 8 ? 3 : score >= 5 ? 2 : 1 };
-  };
-  let zones;
-  if (CFG.ZONE_METHOD === 'density') {
-    // ความหนาแน่นแบบ Gaussian ของทุกระดับ (ถ่วงน้ำหนัก) → ยอด = โซน · ขอบ = ช่วงที่หนาแน่น ≥ ZONE_CORE×ยอด
-    // ราคาจากต่างแหล่งต่างกันเล็กน้อย → ยอดเลื่อนเล็กน้อยตาม (ไม่กระโดดเหมือนการตัดกลุ่มแบบ chain)
-    const bw = Math.max(CFG.ZONE_BW_ATR_H1 * atrH1, 1), step = Math.max(atrH1 / 60, 0.05);
-    const g0 = price - range - 3 * bw, n = Math.ceil((2 * range + 6 * bw) / step);
-    const dens = new Float64Array(n + 1);
-    for (const x of pts) { const i0 = Math.max(0, Math.floor((x.p - 4 * bw - g0) / step)), i1 = Math.min(n, Math.ceil((x.p + 4 * bw - g0) / step));
-      for (let i = i0; i <= i1; i++) { const d = (g0 + i * step - x.p) / bw; dens[i] += x.w * Math.exp(-0.5 * d * d); } }
-    const peaks = [];
-    for (let i = 1; i < n; i++) if (dens[i] > dens[i - 1] && dens[i] >= dens[i + 1] && dens[i] > 0.5) {
-      let a = i, b = i; const cut = CFG.ZONE_CORE * dens[i];
-      while (a > 0 && dens[a - 1] >= cut && dens[a - 1] <= dens[a] + 1e-9) a--;
-      while (b < n && dens[b + 1] >= cut && dens[b + 1] <= dens[b] + 1e-9) b++;
-      const lo = g0 + a * step, hi = g0 + b * step, items = pts.filter(x => x.p >= lo - 0.5 * bw && x.p <= hi + 0.5 * bw);
-      if (!items.length) continue;
-      const zlo = CFG.ZONE_BOUNDS === 'members' ? Math.min(...items.map(x => x.p)) : lo, zhi = CFG.ZONE_BOUNDS === 'members' ? Math.max(...items.map(x => x.p)) : hi;
-      peaks.push(Object.assign(mkZone(items, zlo, zhi), { peak: dens[i] }));
-    }
-    // non-maximum suppression: เก็บยอดสูงสุดก่อน ตัดยอดที่อยู่ใกล้กว่า ZONE_GAP_ATR_H1×ATR
-    const gapN = CFG.ZONE_GAP_ATR_H1 * atrH1, kept = [];
-    peaks.sort((a, b) => b.peak - a.peak).forEach(z => { if (!kept.some(k => Math.abs(k.mid - z.mid) < gapN)) kept.push(z); });
-    zones = kept.filter(z => z.score >= CFG.ZONE_MIN_SCORE);
-  } else {
-    const cl = [];
-    for (const x of pts) {
-      const z = cl[cl.length - 1];
-      if (z && x.p - z.lo <= tol) { z.hi = x.p; z.items.push(x); } else cl.push({ lo: x.p, hi: x.p, items: [x] });
-    }
-    zones = cl.map(z => mkZone(z.items, z.lo, z.hi)).filter(z => z.score >= CFG.ZONE_MIN_SCORE);
-  }
-
-  const buf = Math.max(0.8 * atrM15, 2);
-  // เลือกโซนจากใกล้ไปไกล — โซนที่ห่างกันไม่ถึง ZONE_GAP_ATR_H1 × ATR(H1) ให้เก็บตัวที่คะแนนสูงกว่า
-  const gap = CFG.ZONE_GAP_ATR_H1 * atrH1;
-  const pick = list => {
-    const sel = [];
-    for (const z of list) {
-      const prev = sel[sel.length - 1];
-      if (prev && Math.abs(z.mid - prev.mid) < gap) { if (z.score > prev.score) sel[sel.length - 1] = z; }
-      else sel.push(z);
-    }
-    return sel.slice(0, CFG.ZONE_MAX_EACH_SIDE);
-  };
-  const above = pick(zones.filter(z => z.lo > price).sort((a, b) => a.lo - b.lo));
-  const below = pick(zones.filter(z => z.hi < price).sort((a, b) => b.hi - a.hi));
-  const inside = zones.filter(z => z.lo <= price && z.hi >= price);
-  const dD = S.trend.D1.dir;
-  // แผนของโซน = กฎเดียวกับระบบเทรด: SL พ้น liquidity (swing ถัดไปเลยโซน) + เผื่อ sweep · TP = CFG.SYS.*_TP_R (1R)
-  const C = CFG.SYS, pm = pivots(B.M15.slice(0, -1), CFG.PIVOT.M15), ph = pivots(B.H1.slice(-200, -1), CFG.PIVOT.H1);
-  const plan = (z, side) => {
-    const sgn = side === 'sell' ? -1 : 1, edge = side === 'sell' ? z.hi : z.lo, entry = z.mid;
-    const pool = (side === 'sell' ? [...pm.hs.filter(h => h.i > B.M15.length - 302), ...ph.hs] : [...pm.ls.filter(l => l.i > B.M15.length - 302), ...ph.ls])
-      .map(q => q.p).filter(p => -sgn * (p - edge) > 0 && Math.abs(p - edge) <= C.LIQ_RANGE_ATR_H1 * atrH1);
-    const liq = pool.length ? (side === 'sell' ? Math.min(...pool) : Math.max(...pool)) : null;
-    const sl = liq != null ? liq - sgn * C.LIQ_BUF_ATR_H1 * atrH1 : edge - sgn * C.LIQ_FALLBACK_ATR_H1 * atrH1;
-    const R = Math.abs(entry - sl), tpR = side === 'sell' ? C.SELL_TP_R : C.BUY_TP_R, tps = [entry + sgn * tpR * R];
-    const align = dD === 0 || Math.abs(dD) < 0.5 ? 'range' : (side === 'sell') === (dD < 0) ? 'with' : 'against';
-    return Object.assign(z, { side, entry, sl, liq, tps, rr: [tpR], align, dist: Math.abs(entry - price) });
-  };
-  S.zones = [...above.map(z => plan(z, 'sell')), ...below.map(z => plan(z, 'buy'))];
-  S.insideZone = inside[0] || null;
+/* ---------- SMC ---------- */
+// ทุกฟังก์ชันคิดแบบ "ฝั่ง Buy" (dir-space) · ฝั่ง Sell ใช้แท่งกลับหัว (ราคาติดลบ) แล้วแปลงกลับตอนท้าย
+const thMin = t => { const d = new Date((t + CFG.TZ) * 1000); return d.getUTCHours() * 60 + d.getUTCMinutes(); };
+const mirrorBars = b => b.map(x => ({ t: x.t, o: -x.o, h: -x.l, l: -x.h, c: -x.c }));
+const dispUp = (x, a) => { const C = CFG.SMC, r = x.h - x.l; return x.c - x.o >= C.DISP_BODY * r && r >= C.DISP_ATR * a; };
+const dispDn = (x, a) => { const C = CFG.SMC, r = x.h - x.l; return x.o - x.c >= C.DISP_BODY * r && r >= C.DISP_ATR * a; };
+function sessionBlock(t) { const m = thMin(t), w = CFG.SMC.SESSION_BLOCK.find(([a, b]) => m >= a && m < b); return w ? w[2] : null; }
+function newsBlock(t, news) {
+  if (!news) return null; const C = CFG.SMC;
+  const e = news.find(n => t >= n.t - C.NEWS_BEFORE_MIN * 60 && t < n.t + C.NEWS_AFTER_MIN * 60);
+  return e ? `${e.title} ${fmtT(e.t).slice(6)}` : null;
 }
+const lowerIdx = (arr, i) => { let a = 0, z = arr.length; while (a < z) { const m = (a + z) >> 1; if (arr[m].i <= i) a = m + 1; else z = m; } return a; };
 
-// โซนกลับตัว H1: ระดับจาก swing H1/H4/D1 + High/Low เมื่อวาน/สัปดาห์ก่อน + EMA D1/H4 + เลขกลม → รวมกลุ่มแบบ chain (สเกล ATR H4)
-function buildZonesH1(S) {
-  const B = S.bars, price = S.price, C = CFG.H1Z, aH4 = S.trend.H4.atr, aD1 = S.trend.D1.atr, lv = [];
-  const add = (p, w, src) => lv.push({ p, w, src });
-  const take = (tf, k, back, w) => { const b = B[tf], { hs, ls } = pivots(b, k), from = b.length - back;
-    hs.filter(x => x.i >= from).forEach(x => add(x.p, w, `${tf} High`)); ls.filter(x => x.i >= from).forEach(x => add(x.p, w, `${tf} Low`)); };
-  take('H1', 3, 300, 1); take('H4', 2, 200, 2); take('D1', 2, 120, 3);
-  const D = B.D1, pd = D[D.length - 2]; add(pd.h, 2, 'High เมื่อวาน'); add(pd.l, 2, 'Low เมื่อวาน');
-  const wk = t => Math.floor((t / 86400 + 3) / 7);                    // เลขสัปดาห์ (เริ่มวันจันทร์ UTC)
-  const cw = wk(D[D.length - 1].t), pw = D.filter(b => wk(b.t) === cw - 1);
-  if (pw.length) { add(Math.max(...pw.map(b => b.h)), 3, 'High สัปดาห์ก่อน'); add(Math.min(...pw.map(b => b.l)), 3, 'Low สัปดาห์ก่อน'); }
-  const cD = D.map(b => b.c), e50 = ema(cD, 50), e200 = ema(cD, 200), n = cD.length - 1;
-  add(e50[n], 1.5, 'EMA50 D1'); add(e200[n], 1.5, 'EMA200 D1'); add(S.trend.H4.e200, 1, 'EMA200 H4');
-  for (let r = Math.floor((price - 300) / 50) * 50; r < price + 300; r += 50) add(r, r % 100 === 0 ? 1.5 : 0.5, `เลขกลม ${r}`);
-  const range = C.RANGE_ATR_D1 * aD1, tol = Math.max(C.TOL_ATR_H4 * aH4, 4);
-  const pts = lv.filter(x => Math.abs(x.p - price) <= range).sort((a, b) => a.p - b.p), cl = [];
-  for (const x of pts) { const z = cl[cl.length - 1]; if (z && x.p - z.lo <= tol) { z.hi = x.p; z.items.push(x); } else cl.push({ lo: x.p, hi: x.p, items: [x] }); }
-  const zones = cl.map(z => {
-    const score = z.items.reduce((a, x) => a + x.w, 0), cnt = {};
-    z.items.forEach(x => { cnt[x.src] = (cnt[x.src] || 0) + 1; });
-    let lo = z.lo, hi = z.hi; if (hi - lo < 1) { const m = (lo + hi) / 2; lo = m - 0.5; hi = m + 0.5; }
-    return { lo, hi, mid: (lo + hi) / 2, score, src: Object.entries(cnt).map(([k, v]) => v > 1 ? `${k} ×${v}` : k), stars: score >= 12 ? 3 : score >= 7 ? 2 : 1 };
-  }).filter(z => z.score >= C.MIN_SCORE);
-  const gap = C.GAP_ATR_H4 * aH4;
-  const pick = list => { const sel = []; for (const z of list) { const pv = sel[sel.length - 1];
-    if (pv && Math.abs(z.mid - pv.mid) < gap) { if (z.score > pv.score) sel[sel.length - 1] = z; } else sel.push(z); } return sel.slice(0, C.MAX_EACH_SIDE); };
-  const above = pick(zones.filter(z => z.lo > price).sort((a, b) => a.lo - b.lo)).map(z => Object.assign(z, { side: 'sell', dist: z.lo - price }));
-  const below = pick(zones.filter(z => z.hi < price).sort((a, b) => b.hi - a.hi)).map(z => Object.assign(z, { side: 'buy', dist: price - z.hi }));
-  S.zonesH1 = [...above, ...below];
-  S.insideZoneH1 = zones.find(z => z.lo <= price && z.hi >= price) || null;
-}
-
-// คะแนนโซน → ดาว 1–5 (★5 = แข็งที่สุด 20% ของโซนในอดีต)
-const rating = (score, tf) => 1 + CFG.RATING[tf].filter(t => score >= t).length;
-const starsHtml = n => `<span class="stars" title="Rating ${n}/5">${'★'.repeat(n)}<span class="off">${'☆'.repeat(5 - n)}</span></span>`;
-
-function detectSignals(S) {
-  const b = S.bars.M15, n = b.length - 2; // แท่งปิดล่าสุด (แท่งสุดท้ายยังไม่ปิด)
-  const c = b.map(x => x.c), R = rsi(c), St = stoch(b), { hs, ls } = pivots(b, CFG.PIVOT.M15);
-  const atrM = S.m15atr, out = [];
-  const zonesAll = S.zonesForSignals;
-  for (let i = n - CFG.SIGNAL_LOOKBACK + 1; i <= n; i++) {
-    const x = b[i], p = b[i - 1], rng = x.h - x.l || 1e-9;
-    const upW = x.h - Math.max(x.o, x.c), dnW = Math.min(x.o, x.c) - x.l, body = Math.abs(x.c - x.o);
-    for (const z of zonesAll) {
-      // ---- SELL: ราคาวิ่งขึ้นมาจากใต้โซน (แท่งก่อนปิดใต้โซน) แตะโซนแล้วปิดกลับลงไปใต้โซน
-      if (p.c < z.lo && x.h >= z.lo - 0.1 * atrM && x.c < z.lo) {
-        const pin = upW >= 0.5 * rng, eng = x.c < x.o && p.c > p.o && x.c <= p.o && x.o >= p.c;
-        if (pin || eng) {
-          const prevH = hs.filter(h => h.i < i - 1 && h.i >= i - 60).pop();
-          const div = prevH && x.h > prevH.p && R[i] < R[prevH.i];
-          const stTurn = St.k[i] < St.d[i] && Math.max(St.k[i - 1], St.k[i - 2]) > 70;
-          const trendOK = S.trend.H1.dir <= 0.25 || S.trend.D1.dir < 0;
-          out.push(mk('sell', i, z, pin ? 'Pin bar' : 'Bearish engulfing', [['Stoch หักลงจาก >70', stTurn], ['RSI divergence', !!div], ['เทรนด์ไม่ขัด (H1/D ปัจจุบัน)', trendOK]]));
-        }
-      }
-      // ---- BUY: ราคาวิ่งลงมาจากเหนือโซน แตะโซนแล้วปิดกลับขึ้นไปเหนือโซน
-      if (p.c > z.hi && x.l <= z.hi + 0.1 * atrM && x.c > z.hi) {
-        const pin = dnW >= 0.5 * rng, eng = x.c > x.o && p.c < p.o && x.c >= p.o && x.o <= p.c;
-        if (pin || eng) {
-          const prevL = ls.filter(l => l.i < i - 1 && l.i >= i - 60).pop();
-          const div = prevL && x.l < prevL.p && R[i] > R[prevL.i];
-          const stTurn = St.k[i] > St.d[i] && Math.min(St.k[i - 1], St.k[i - 2]) < 30;
-          const trendOK = S.trend.H1.dir >= -0.25 || S.trend.D1.dir > 0;
-          out.push(mk('buy', i, z, pin ? 'Pin bar' : 'Bullish engulfing', [['Stoch หักขึ้นจาก <30', stTurn], ['RSI divergence', !!div], ['เทรนด์ไม่ขัด (H1/D ปัจจุบัน)', trendOK]]));
-        }
-      }
-      // ---- Breakout: แท่งก่อนยังอยู่ในฝั่งเดิม แล้วปิดทะลุโซนด้วยแท่งตัวเต็ม (body ≥ 60%)
-      if (z.stars >= 2 && body >= 0.6 * rng) {
-        if (p.c <= z.hi && x.c > z.hi + 0.5 * atrM && x.c > x.o) out.push({ kind: 'brk', side: 'up', i, t: x.t, z, price: x.c });
-        if (p.c >= z.lo && x.c < z.lo - 0.5 * atrM && x.c < x.o) out.push({ kind: 'brk', side: 'down', i, t: x.t, z, price: x.c });
+// โซนฝั่ง demand ของแท่งชุดหนึ่ง (dir-space): OB จาก BOS แบบ displacement + EQL · tAv = เวลาที่รู้ว่ามีโซน · tMit = เวลาที่ถูกใช้/ถูกกวาด
+function demandZones(b, per, tf) {
+  const C = CFG.SMC, k = C.HTF_PIVOT, A = atr(b), { hs, ls } = pivots(b, k), out = [];
+  let hp = 0, cand = null, brokenJ = -1;
+  for (let i = 1; i < b.length; i++) {
+    while (hp < hs.length && hs[hp].i + k < i) cand = hs[hp++];
+    const x = b[i];
+    if (cand && cand.i !== brokenJ && x.c > cand.p) {
+      brokenJ = cand.i;
+      if (dispUp(x, A[i - 1])) {
+        let L = cand.i; for (let j = cand.i; j <= i; j++) if (b[j].l < b[L].l) L = j;
+        let ob = L; for (let j = i - 1; j >= L; j--) if (b[j].c < b[j].o) { ob = j; break; }
+        const z = { kind: 'OB', tf, lo: b[ob].l, hi: b[ob].h, tAv: b[i].t + per, tMit: null };
+        for (let m = i + 1; m < b.length; m++) if (b[m].l <= z.hi) { z.tMit = b[m].t; break; }     // ราคากลับมาแตะ = ถูกใช้
+        out.push(z);
       }
     }
   }
-  function mk(side, i, z, candle, extra) {
-    const passed = extra.filter(c => c[1]).length;
-    const buf = Math.max(0.8 * atrM, 2), x = b[i];
-    const sl = side === 'sell' ? Math.max(x.h, z.hi) + buf : Math.min(x.l, z.lo) - buf;
-    const checks = [['แตะโซนแล้วปิดกลับ', true], [candle, true], ...extra];
-    return { kind: 'rev', side, i, t: x.t, z, checks, passed, grade: passed === 3 ? 'A' : passed === 2 ? 'B' : 'C', price: x.c, sl };
+  for (let q = 1; q < ls.length; q++) {
+    const p1 = ls[q - 1], p2 = ls[q];
+    if (Math.abs(p1.p - p2.p) > C.HTF_EQ_TOL_ATR * A[p2.i]) continue;
+    const ci = p2.i + k; if (ci >= b.length) continue;
+    const z = { kind: 'EQ', tf, lo: Math.min(p1.p, p2.p), hi: Math.max(p1.p, p2.p), tAv: b[ci].t + per, tMit: null };
+    for (let m = ci + 1; m < b.length; m++) if (b[m].l < z.lo) { z.tMit = b[m].t; break; }        // ทะลุ = ถูกกวาด
+    out.push(z);
   }
-  // ต่อแท่ง/ฝั่ง เก็บตัวที่ดีที่สุด แล้วกันซ้ำ: โซนเดิม ฝั่งเดิม ภายใน COOLDOWN แท่ง นับเฉพาะครั้งแรก
-  const best = {};
-  out.forEach(s => { const k = s.kind + s.side + s.t; if (!best[k] || (s.passed || 0) > (best[k].passed || 0)) best[k] = s; });
-  const lastAt = {}, kept = [];
-  Object.values(best).sort((a, b) => a.t - b.t).forEach(s => {
-    const k = s.kind + s.side + s.z.lo.toFixed(1);
-    if (lastAt[k] != null && s.i - lastAt[k] <= CFG.SIGNAL_COOLDOWN) return;
-    lastAt[k] = s.i; kept.push(s);
-  });
-  S.signals = kept.sort((a, b) => b.t - a.t);
+  return out;
+}
+// โซนใหญ่ของ TF หนึ่ง (ราคาจริง): side 'buy' = Bullish OB / EQL (ใต้ราคา) · 'sell' = Bearish OB / EQH (เหนือราคา)
+function htfZones(b, tf) {
+  const per = { H1: 3600, H4: 14400 }[tf];
+  return [...demandZones(b, per, tf).map(z => ({ ...z, side: 'buy' })),
+          ...demandZones(mirrorBars(b), per, tf).map(z => ({ ...z, side: 'sell', lo: -z.hi, hi: -z.lo }))];
+}
+// โซนฝั่งตรงข้ามของ side ในรูป dir-space (เก็บราคาจริงไว้ที่ rLo/rHi)
+const dirZones = (zones, sg) => zones.filter(z => z.side === (sg > 0 ? 'sell' : 'buy'))
+  .map(z => ({ ...z, rLo: z.lo, rHi: z.hi, lo: sg > 0 ? z.lo : -z.hi, hi: sg > 0 ? z.hi : -z.lo }));
+const freshAt = (z, T) => z.tAv <= T && (z.tMit == null || z.tMit > T) && T - z.tAv <= CFG.SMC.HTF_MAX_AGE[z.tf];
+
+// สแกน setup ของฝั่งหนึ่งบนแท่ง M5 ที่ปิดแล้ว
+// ctx: { atr, bias(t) → {h1,h4,h1L,h4L}, news, obst: dirZones(...) , eq: dirZones(EQ ของ H1) }
+// สถานะ setup: wait (รอราคามา; armed = ตั้ง Limit ได้) · filled · skipped (ถึงโซนแต่มีเหตุให้ข้าม) · expired · replaced
+function smcScan(bReal, side, ctx) {
+  const C = CFG.SMC, sg = side === 'buy' ? 1 : -1, b = sg > 0 ? bReal : mirrorBars(bReal), k = C.PIVOT;
+  const A = ctx.atr || atr(bReal), { hs, ls } = pivots(b, k), setups = [];
+  let hp = 0, cand = null, brokenJ = -1;
+  for (let i = 1; i < b.length; i++) {
+    const x = b[i];
+    for (const s of setups) if (s.st === 'wait') step(s, i);
+    while (hp < hs.length && hs[hp].i + k < i) cand = hs[hp++];
+    if (cand && cand.i !== brokenJ && x.c > cand.p) {
+      brokenJ = cand.i;
+      if (i >= (ctx.from || 1) && dispUp(x, A[i - 1])) {
+        for (const s of setups) if (s.st === 'wait') { s.st = 'replaced'; s.endI = i; }
+        let L = cand.i; for (let j = cand.i; j <= i; j++) if (b[j].l < b[L].l) L = j;
+        let ob = L; for (let j = i - 1; j >= L; j--) if (b[j].c < b[j].o) { ob = j; break; }
+        let Hi = L; for (let j = L; j <= i; j++) if (b[j].h > b[Hi].h) Hi = j;
+        const s = { side, sg, i0: i, t0: b[i].t, swing: cand.p, swingT: b[cand.i].t, Li: L, L: b[L].l, obi: ob, obLo: b[ob].l, obHi: b[ob].h,
+                    Hi, H: b[Hi].h, st: 'wait', tap: null, tapI: null, bounced: false };
+        recalc(s, i); evalBlocks(s, i); setups.push(s);
+      }
+    }
+  }
+  return setups.map(toReal);
+
+  function recalc(s, i) {
+    s.fvg = null;                                            // FVG (แท่ง 1 กับแท่ง 3 ไม่ซ้อนกัน) ที่อยู่เหนือ OB — เอาอันล่างสุด
+    for (let j = s.obi + 1; j + 1 <= i; j++) {
+      const lo = b[j - 1].h, hi = b[j + 1].l;
+      if (hi > lo && lo >= s.obLo && (!s.fvg || lo < s.fvg.lo)) s.fvg = { lo, hi };
+    }
+    const r = s.H - s.L;
+    s.f618 = s.H - C.FIB_A * r; s.f705 = s.H - C.FIB_B * r; s.f50 = s.H - 0.5 * r; s.fExt = s.H + C.FIB_EXT * r;
+    s.poi = !!s.fvg && s.obHi >= s.f705 && s.obLo <= s.f618;            // Fibo 61.8–70.5 ทับกล่อง OB
+    const fvgAt618 = s.fvg && s.fvg.lo <= s.f618 && s.f618 <= s.fvg.hi;
+    s.entry = fvgAt618 ? s.f618 : s.obHi; s.entryBy = fvgAt618 ? 'Fibo 61.8% (FVG คลุม)' : 'ขอบ OB';
+    s.sl = s.obLo - C.SL_BUF; s.risk = s.entry - s.sl; s.tp1 = s.H;
+    // TP2 = Fibo −0.27 หรือ EQH ถัดไป (M5 / H1) ถ้าถึงก่อน
+    const T = b[i].t, tol = C.EQ_TOL_ATR * A[i]; let tgt = null;
+    for (let q = Math.max(1, lowerIdx(hs, i - C.EQ_LOOKBACK)); q < hs.length && hs[q].i + k <= i; q++) {
+      const p1 = hs[q - 1], p2 = hs[q], lo = Math.min(p1.p, p2.p), hi = Math.max(p1.p, p2.p);
+      if (lo <= s.H || hi - lo > tol) continue;
+      let swept = false; for (let m = p2.i + 1; m <= i; m++) if (b[m].h > hi) { swept = true; break; }
+      if (!swept && (tgt == null || lo < tgt)) tgt = lo;
+    }
+    for (const z of ctx.eq || []) if (z.kind === 'EQ' && freshAt(z, T) && z.lo > s.H && (tgt == null || z.lo < tgt)) tgt = z.lo;
+    s.tp2 = s.fExt; s.tp2By = 'Fibo −0.27';
+    if (tgt != null && tgt < s.fExt) { s.tp2 = tgt; s.tp2By = 'EQ ถัดไป'; }
+    s.rr1 = s.risk > 0 ? (s.tp1 - s.entry) / s.risk : 0; s.rr2 = s.risk > 0 ? (s.tp2 - s.entry) / s.risk : 0;
+    // โซนใหญ่ H1/H4 ฝั่งตรงข้ามขวางทาง: OB ที่ยังสดตอนเริ่มคลื่น (คลื่นวิ่งไปชน) / EQ ที่ยังไม่ถูกกวาด
+    s.obst = null; const top = s.tp1 + C.OBST_PAD_R * Math.max(s.risk, 0), T0 = b[s.Li].t;
+    for (const z of ctx.obst || []) {
+      if (!freshAt(z, z.kind === 'OB' ? T0 : T) || z.hi < s.entry || z.lo > top) continue;
+      s.obst = z; break;
+    }
+  }
+  function step(s, i) {
+    const x = b[i];
+    if (x.l <= s.entry) {                                    // ราคามาถึงจุด Limit
+      s.endI = i; s.fillPx = Math.min(x.o, s.entry);
+      s.st = s.armed ? 'filled' : 'skipped'; return;
+    }
+    if (i - s.i0 > C.EXPIRE_BARS) { s.st = 'expired'; s.endI = i; return; }
+    if (x.h > s.H) { s.H = x.h; s.Hi = i; s.tap = null; s.tapI = null; s.bounced = false; recalc(s, i); }   // คลื่นยืด → ลาก Fibo ใหม่
+    else {
+      if (s.fvg && x.l <= s.fvg.hi) { if (s.tap == null) s.tapI = i; s.tap = s.tap == null ? x.l : Math.min(s.tap, x.l); }
+      if (s.tap != null && i > s.tapI && x.h >= s.tap + C.BOUNCE_ATR * A[i]) s.bounced = true;
+    }
+    evalBlocks(s, i);
+  }
+  // เงื่อนไขสำหรับการตั้ง Limit ในแท่งถัดไป (รู้ได้เมื่อแท่ง i ปิด)
+  function evalBlocks(s, i) {
+    const B = [], add = (code, text) => B.push({ code, text }), tNext = b[i].t + C.SEC;
+    if (!s.fvg) add('fvg', 'ไม่มี FVG เหนือ OB');
+    else if (!s.poi) add('poi', 'Fibo 61.8–70.5% ไม่ทับกล่อง OB');
+    if (s.risk > C.MAX_RISK) add('risk', `SL กว้าง $${s.risk.toFixed(1)} > $${C.MAX_RISK}`);
+    if (s.rr1 < C.MIN_RR) add('rr', `R:R ถึง TP1 = ${s.rr1.toFixed(2)} < ${C.MIN_RR}`);
+    if (s.bounced) add('mit', 'โซนถูกใช้แล้ว (แตะ FVG แล้วเด้ง ไม่ทำ High ใหม่)');
+    let v = 0; for (let j = Math.max(s.Hi + 1, i - C.VSHAPE_N + 1); j <= i; j++) if (dispDn(b[j], A[j - 1])) v++;
+    if (v >= C.VSHAPE_MIN) add('v', `ย่อลงแรงแบบ V (แท่งตัวเต็มสวนทาง ${v} แท่ง)`);
+    const tol = C.EQ_TOL_ATR * A[i], pl = [];
+    for (let q = lowerIdx(ls, s.Li); q < ls.length && ls[q].i + k <= i; q++) if (ls[q].p > s.entry && ls[q].p <= s.f50) pl.push(ls[q].p);
+    let eq = null; for (let a = 0; a < pl.length && eq == null; a++) for (let c = a + 1; c < pl.length; c++) if (Math.abs(pl[a] - pl[c]) <= tol) { eq = Math.min(pl[a], pl[c]); break; }
+    if (eq != null) add('eq', `มี ${sg > 0 ? 'EQL' : 'EQH'} ${fmt(sg * eq)} หน้าโซน (liquidity ล่อ SL)`);
+    if (s.obst) add('obst', `ติดโซนใหญ่ ${s.obst.tf} ${s.obst.kind === 'OB' ? (sg > 0 ? 'Bearish OB' : 'Bullish OB') : (sg > 0 ? 'EQH' : 'EQL')} ${fmt(s.obst.rLo)}–${fmt(s.obst.rHi)}`);
+    if (ctx.bias) {
+      const bi = ctx.bias(tNext);
+      if (sg * bi.h1 < 0.5) add('bias', `H1 ไม่ใช่ขา${sg > 0 ? 'ขึ้น' : 'ลง'}${bi.h1L ? ` (${bi.h1L})` : ''}`);
+      if (sg * bi.h4 <= -0.5) add('h4', `H4 เป็นขา${sg > 0 ? 'ลง' : 'ขึ้น'}ชัด${bi.h4L ? ` (${bi.h4L})` : ''}`);
+    }
+    const ss = sessionBlock(tNext); if (ss) add('sess', `ช่วง${ss}`);
+    const nw = newsBlock(tNext, ctx.news); if (nw) add('news', `ใกล้ข่าวแดง ${nw}`);
+    s.blocks = B; s.armed = B.length === 0;
+  }
+  function toReal(s) {
+    if (sg > 0) return s;
+    const n = v => v == null ? v : -v;
+    return { ...s, L: n(s.L), H: n(s.H), swing: n(s.swing), entry: n(s.entry), sl: n(s.sl), tp1: n(s.tp1), tp2: n(s.tp2), fillPx: n(s.fillPx),
+      f618: n(s.f618), f705: n(s.f705), f50: n(s.f50), fExt: n(s.fExt), tap: n(s.tap), obLo: -s.obHi, obHi: -s.obLo,
+      fvg: s.fvg && { lo: -s.fvg.hi, hi: -s.fvg.lo }, tp2By: s.tp2By, entryBy: s.entryBy };
+  }
 }
 
-// % ที่ราคาจะมาถึงโซน (ขอบใกล้) ภายใน 4 / 24 ชม. — ระยะวัดเป็น ATR(H1), ทิศเทียบเทรนด์ D
-function zoneReach(S, z) {
-  if (z.lo <= S.price && z.hi >= S.price) return { d: 0, h4: 100, h24: 100 };
-  const up = z.lo > S.price, d = (up ? z.lo - S.price : S.price - z.hi) / S.trend.H1.atr, dir = S.trend.D1.dir;
-  const reg = Math.abs(dir) < 0.5 ? 'range' : (up === dir > 0) ? 'with' : 'against';
-  const P = arr => { const k = d / CFG.REACH_STEP; if (k <= 1) return 100 - (100 - arr[0]) * k; if (k >= arr.length) return arr[arr.length - 1] * Math.exp(-(k - arr.length) / 4);
-    const i = Math.floor(k) - 1, f = k - Math.floor(k); return arr[i] + (arr[i + 1] - arr[i]) * f; };
-  return { d, reg, h4: P(CFG.REACH[`h4|${reg}`]), h24: P(CFG.REACH[`h24|${reg}`]) };
-}
-
-// TP 1R/2R/4R/8R ของโซนหรือสัญญาณ พร้อม % ไปถึงก่อน SL ตามฝั่ง/สถานะระบบตอนนี้
-function tpLadder(S, side, entry, sl) {
-  const dUp = S.trend.D1.dir >= 0.5, h4Up = S.trend.H4.dir >= 0.5, R = Math.abs(entry - sl), sg = side === 'buy' ? 1 : -1;
-  const key = side === 'buy' ? (dUp && h4Up ? 'buy_on' : 'buy_off') : (!dUp && !h4Up ? 'sell_on' : 'sell_off');
-  const t = CFG.TPREACH[key], alt = key === 'sell_on' ? CFG.TPREACH.sell_on_nosweep : null;
-  return { key, n: t.n, alt, levels: CFG.TP_LEVELS.map((k, i) => ({ k, price: entry + sg * k * R, p: t.p[i], be: 100 / (1 + k), pAlt: alt ? alt.p[i] : null })) };
-}
-function tpHtml(L) {
-  return `<div class="tps">${L.levels.map(l => `<span class="tpc" title="เท่าทุนต้องถึง ${l.be.toFixed(0)}%"><b>${l.k}R</b> <span class="mono">${fmt(l.price)}</span>
-    <b class="mono" style="color:${l.p >= l.be + 2 ? 'var(--up)' : l.p >= l.be - 2 ? 'var(--side)' : 'var(--down)'}">${l.p.toFixed(0)}%</b></span>`).join('')}</div>
-    <div class="meta">% = โอกาสถึง TP ก่อนโดน SL ภายใน 24 ชม. (backtest n=${L.n}${L.alt ? ` · ต้องมี Sweep — ไม่มี Sweep: ${L.levels.map(l => l.pAlt.toFixed(0) + '%').join('/')}` : ''}) · เขียว = เกินจุดเท่าทุน</div>`;
-}
-
-// % ชนะของโซน ตามสถานะเทรนด์ตอนนี้ (TP 1R) — ดาวแทบไม่มีผล จึงใช้ค่ารวมเมื่อกลุ่มดาวมีไม้น้อย
-function zoneWin(S, z) {
-  const W = CFG.WINRATE, dUp = S.trend.D1.dir >= 0.5, h4Up = S.trend.H4.dir >= 0.5;
-  const get = k => { const a = W[`${k}_${z.stars}`]; return a && a.n >= CFG.WINRATE_MIN_N ? a : W[`${k}_all`]; };
-  if (z.side === 'buy') {
-    const on = dUp && h4Up;
-    return { on, main: get(on ? 'buy_on' : 'buy_off'), note: on ? 'ระบบ Buy เปิด' : 'ระบบ Buy ปิด (D/H4 ไม่ขาขึ้น)' };
+// ผลของไม้ที่เข้าแล้ว (แท่ง M5): SL ก่อนถ้าชนทั้งคู่ในแท่งเดียว · TP1 ปิด PARTIAL แล้ว SL = จุดเข้า · ครบ MAX_HOLD_BARS ปิดที่ราคา
+// คืน r = กำไรเป็นเท่าของความเสี่ยง (ทั้งไม้) · status open / TP1 (ยังถือครึ่งหลัง) / SL / TP1+BE / TP2 / TIME
+function smcOutcome(b, fi, tr) {
+  const C = CFG.SMC, sg = tr.side === 'buy' ? 1 : -1, P = C.PARTIAL;
+  const lo = x => sg > 0 ? x.l : -x.h, hi = x => sg > 0 ? x.h : -x.l;
+  const E = sg * tr.entry, SL = sg * tr.sl, T1 = sg * tr.tp1, T2 = sg * tr.tp2, risk = E - SL, r1 = (T1 - E) / risk, r2 = (T2 - E) / risk;
+  const done = (status, r, j, exit) => ({ status, r, exitT: b[j].t + C.SEC, exit, half: status !== 'SL' && status !== 'TIME' ? true : undefined });
+  if (lo(b[fi]) <= SL) return done('SL', -1, fi, tr.sl);
+  let half = false; const end = fi + C.MAX_HOLD_BARS;
+  for (let j = fi + 1; j <= Math.min(end, b.length - 1); j++) {
+    const x = b[j];
+    if (!half) {
+      if (lo(x) <= SL) return done('SL', -1, j, tr.sl);
+      if (hi(x) >= T1) half = true;
+    } else {
+      if (lo(x) <= E) return done('TP1+BE', P * r1, j, tr.entry);
+      if (hi(x) >= T2) return done('TP2', P * r1 + (1 - P) * r2, j, tr.tp2);
+    }
   }
-  const on = !dUp && !h4Up;
-  return on ? { on, main: get('sell_on'), alt: get('sell_on_nosweep'), note: 'ระบบ Sell เปิด — ตัวเลขนี้ต้องมี Sweep' }
-            : { on, main: get('sell_off'), note: 'ระบบ Sell ปิด (D หรือ H4 ขาขึ้น)' };
-}
-
-// ระบบเทรด: Sell = กลับตัวที่โซน + Sweep + D และ H4 ไม่ใช่ขาขึ้น (TP 1R) · Buy = กลับตัวที่โซน + D และ H4 ขาขึ้น (TP 1R)
-function systemSignals(S) {
-  const b = S.bars.M15, n = b.length - 2, C = CFG.SYS, aH1 = S.trend.H1.atr, out = [];
-  const pm = pivots(b.slice(0, -1), CFG.PIVOT.M15), ph = pivots(S.bars.H1.slice(-200, -1), CFG.PIVOT.H1);
-  const entryAt = i => i === n ? S.price : b[i + 1].o;     // แท่งล่าสุด = ราคาตอนนี้ · ย้อนหลัง = เปิดแท่งถัดไป
-  // TP: tpR×R ตามปกติ · ถ้ามีโซน H1 ฝั่งตรงข้ามขวางก่อน (ระยะ H1_TP_MIN_R..tpR) → TP ที่ขอบใกล้ของโซน H1
-  const planTP = (sg, entry, R, tpR) => {
-    const opp = (S.zonesH1 || []).filter(z => z.side === (sg > 0 ? 'sell' : 'buy')).map(z => sg > 0 ? z.lo : z.hi)
-      .filter(p => sg * (p - entry) > 0).sort((a, c) => sg * (a - c))[0];
-    const d = opp != null ? sg * (opp - entry) / R : null;
-    if (d != null && d >= C.H1_TP_MIN_R && d < tpR) return { tp: opp, tpR: +d.toFixed(2), h1: true };
-    return { tp: entry + sg * tpR * R, tpR, h1: false };
-  };
-  const dUp = S.trend.D1.dir >= 0.5, h4Up = S.trend.H4.dir >= 0.5;
-  S.sysState = { sellOn: !dUp && !h4Up, buyOn: dUp && h4Up };
-  // ---- SELL
-  for (const s of S.signals) {
-    if (s.kind !== 'rev' || s.side !== 'sell' || dUp || h4Up) continue;
-    const i = s.i, x = b[i];
-    const rec = pm.hs.filter(h => h.i < i - 1 && h.i >= i - C.SWEEP_LOOKBACK);
-    const sw = rec.length ? rec[rec.length - 1].p : null;
-    if (sw == null || !(x.h > sw && x.c < sw)) continue;     // ต้อง sweep จริง: ไส้ทะลุ swing high แล้วปิดกลับใต้
-    const edge = Math.max(x.h, s.z.hi);
-    const pool = [...pm.hs.filter(h => h.i > b.length - 302), ...ph.hs].map(h => h.p).filter(p => p > edge && p <= edge + C.LIQ_RANGE_ATR_H1 * aH1);
-    const sl = pool.length ? Math.min(...pool) + C.LIQ_BUF_ATR_H1 * aH1 : edge + C.LIQ_FALLBACK_ATR_H1 * aH1;
-    const entry = entryAt(i), R = sl - entry;
-    if (R <= 0.5) continue;
-    const P = planTP(-1, entry, R, C.SELL_TP_R);
-    out.push({ side: 'sell', i, t: x.t, entry, sl, tp: P.tp, R, tpR: P.tpR, sweptAt: sw, z: s.z,
-      why: `Sweep swing high ${fmt(sw)} แล้วปิดกลับ · โซน ${fmt(s.z.lo)}–${fmt(s.z.hi)} · SL ${pool.length ? 'พ้น liquidity ' + fmt(Math.min(...pool)) : 'ขอบ + 1×ATR H1'}${P.h1 ? ` · TP ที่แนวรับ H1 ${fmt(P.tp)} (ขวางก่อน 1R)` : ''}` });
-  }
-  // ---- BUY: สัญญาณกลับตัว Buy ของแอป เมื่อ D และ H4 ขาขึ้น · SL ใต้ liquidity (swing low ถัดไป) + เผื่อ sweep
-  for (const s of S.signals) {
-    if (s.kind !== 'rev' || s.side !== 'buy' || !(dUp && h4Up)) continue;
-    const i = s.i, x = b[i], edge = Math.min(x.l, s.z.lo);
-    const pool = [...pm.ls.filter(l => l.i > b.length - 302), ...ph.ls].map(l => l.p).filter(p => p < edge && p >= edge - C.LIQ_RANGE_ATR_H1 * aH1);
-    const sl = pool.length ? Math.max(...pool) - C.LIQ_BUF_ATR_H1 * aH1 : edge - C.LIQ_FALLBACK_ATR_H1 * aH1;
-    const entry = entryAt(i), R = entry - sl;
-    if (R <= 0.5) continue;
-    const P = planTP(1, entry, R, C.BUY_TP_R);
-    out.push({ side: 'buy', i, t: x.t, entry, sl, tp: P.tp, R, tpR: P.tpR, z: s.z,
-      why: `กลับตัวขึ้นที่โซน ${fmt(s.z.lo)}–${fmt(s.z.hi)} (${s.checks[1][0]}) · D ${S.trend.D1.label} + H4 ${S.trend.H4.label} · SL ${pool.length ? 'ใต้ liquidity ' + fmt(Math.max(...pool)) : 'ขอบ − 1×ATR H1'}${P.h1 ? ` · TP ที่แนวต้าน H1 ${fmt(P.tp)} (ขวางก่อน 1R)` : ''}` });
-  }
-  S.sys = out.sort((a, b2) => b2.t - a.t);
+  if (end > b.length - 1) return { status: half ? 'TP1' : 'open', half, r: null };
+  const rc = (sg * b[end].c - E) / risk;
+  return { status: 'TIME', r: half ? P * r1 + (1 - P) * rc : rc, exitT: b[end].t + C.SEC, exit: b[end].c, half };
 }
 
 function analyze(S) {
   for (const tf of ['D1', 'H4', 'H1']) S.trend[tf] = analyzeTrend(tf, S.bars[tf]);
-  const m = S.bars.M15, mc = m.map(x => x.c);
-  S.m15atr = atr(m)[m.length - 1];
+  const m = S.bars.M5, mc = m.map(x => x.c);
+  S.m5atr = atr(m)[m.length - 1];
   const st = stoch(m), A = adx(m), e20 = ema(mc, 20), e50 = ema(mc, 50), n = m.length - 1;
-  S.m15 = { stochK: st.k[n], stochD: st.d[n], adx: A.adx[n], e20: e20[n], e50: e50[n], rsi: rsi(mc)[n] };
+  S.m5 = { stochK: st.k[n], stochD: st.d[n], adx: A.adx[n], e20: e20[n], e50: e50[n], rsi: rsi(mc)[n] };
   const P = CFG.STOCHRSI; S.srsi = stochRsi(mc, P.K, P.D, P.RSI, P.STOCH);
   const W = CFG.WEIGHT; S.biasScore = (S.trend.D1.dir * W.D1 + S.trend.H4.dir * W.H4 + S.trend.H1.dir * W.H1) / (W.D1 + W.H4 + W.H1);
-  buildZones(S);
-  buildZonesH1(S);
-  // สำหรับตรวจสัญญาณย้อนหลัง ใช้โซนทั้งสองฝั่งรวมโซนที่ราคาอยู่ตอนนี้
-  S.zonesForSignals = [...S.zones, ...(S.insideZone ? [S.insideZone] : [])];
-  detectSignals(S);
-  systemSignals(S);
+  const h1 = S.trend.H1.dir, h4 = S.trend.H4.dir;
+  S.allow = h1 >= 0.5 && h4 > -0.5 ? 'buy' : h1 <= -0.5 && h4 < 0.5 ? 'sell' : null;
+  // โซนใหญ่ H1/H4 + setup M5 (เฉพาะแท่งที่ปิดแล้ว → ไม่ repaint)
+  S.htf = [...htfZones(S.bars.H1, 'H1'), ...htfZones(S.bars.H4, 'H4')];
+  const b = m.slice(0, -1), Am = atr(b);
+  const bias = () => ({ h1, h4, h1L: S.trend.H1.label, h4L: S.trend.H4.label });
+  S.smc = {};
+  for (const side of ['buy', 'sell']) {
+    const sg = side === 'buy' ? 1 : -1;
+    S.smc[side] = smcScan(b, side, { atr: Am, bias, news: S.news, obst: dirZones(S.htf, sg), eq: dirZones(S.htf.filter(z => z.tf === 'H1'), sg) });
+  }
 }
-
 /* UI */
 const $ = id => document.getElementById(id);
-const S = window.S = { bars: null, trend: {}, zones: [], signals: [], seen: new Set(), price: null, notify: false, firstRun: true };
+const S = window.S = { bars: null, trend: {}, smc: { buy: [], sell: [] }, htf: [], seen: new Set(), price: null, notify: false, firstRun: true, news: null };
 let chart, series, priceLines = [];
-// ย่อ/ขยายโซน: จำว่าโซนไหนถูกย่อ (key = ฝั่ง+ราคาล่าง) · โหมดย่อทั้งหมด = โซนใหม่ที่เกิดขึ้นก็ย่อด้วย
-S.zonesClosed = new Set(); S.zonesAllClosed = true;     // เปิดหน้า = ย่อทั้งหมด
-// ย่อ/ขยายในกล่องระบบเทรด (บันได / กฎ Buy / กฎ Sell / การ์ดสัญญาณ)
-S.sysClosed = new Set(); S.sysAllClosed = true;         // เปิดหน้า = ย่อทั้งหมด
+// ย่อ/ขยายในกล่องระบบ (กฎ / setup / ไม้ที่เข้า) — เปิดหน้า = ย่อทั้งหมด
+S.sysClosed = new Set(); S.sysAllClosed = true;
 // auto reload: คืนสถานะย่อ/ขยายและ scroll จากก่อนโหลด (sessionStorage ใช้ได้เฉพาะแท็บนี้)
 S.restore = null;
 try {
   if (sessionStorage.getItem('autoReload') === '1') {
     const u = JSON.parse(sessionStorage.getItem('uiState') || 'null');
-    if (u) { S.zonesAllClosed = u.za; S.zonesClosed = new Set(u.zc); S.sysAllClosed = u.sa; S.sysClosed = new Set(u.sc); S.restore = u; }
+    if (u) { S.sysAllClosed = u.sa; S.sysClosed = new Set(u.sc || []); S.restore = u; }
   }
   sessionStorage.removeItem('autoReload');
 } catch (e) { }
 function autoReload() {
   try {
-    sessionStorage.setItem('uiState', JSON.stringify({ za: S.zonesAllClosed, zc: [...S.zonesClosed], sa: S.sysAllClosed, sc: [...S.sysClosed], h1a: S.zonesH1AllClosed, h1: [...S.zonesH1Closed], y: window.scrollY }));
+    sessionStorage.setItem('uiState', JSON.stringify({ sa: S.sysAllClosed, sc: [...S.sysClosed], y: window.scrollY }));
     sessionStorage.setItem('autoReload', '1');
   } catch (e) { }
   location.reload();
@@ -612,20 +540,6 @@ function syncSysBtn() {
   const anyOpen = els.some(el => !el.classList.contains('closed'));
   const b = $('btnSys'); b.textContent = anyOpen ? '▾ ย่อทั้งหมด' : '▸ ขยายทั้งหมด'; b.setAttribute('aria-expanded', anyOpen);
 }
-S.zonesH1Closed = new Set(); S.zonesH1AllClosed = true;      // เปิดหน้า = ย่อทั้งหมด
-try { if (S.restore && S.restore.h1) { S.zonesH1AllClosed = S.restore.h1a; S.zonesH1Closed = new Set(S.restore.h1); } } catch (e) { }
-function syncZonesH1Btn() {
-  const els = [...document.querySelectorAll('#zonesH1 .zone')];
-  if (S.zonesH1AllClosed) els.forEach(el => { el.classList.add('closed'); S.zonesH1Closed.add(el.dataset.k); });
-  const anyOpen = els.some(el => !el.classList.contains('closed'));
-  const b = $('btnZonesH1'); b.textContent = anyOpen ? '▾ ย่อทั้งหมด' : '▸ ขยายทั้งหมด'; b.setAttribute('aria-expanded', anyOpen);
-}
-function syncZonesBtn() {
-  const els = [...document.querySelectorAll('#zones .zone')];
-  if (S.zonesAllClosed) els.forEach(el => { el.classList.add('closed'); S.zonesClosed.add(el.dataset.k); });
-  const anyOpen = els.some(el => !el.classList.contains('closed'));
-  const b = $('btnZones'); b.textContent = anyOpen ? '▾ ย่อทั้งหมด' : '▸ ขยายทั้งหมด'; b.setAttribute('aria-expanded', anyOpen);
-}
 
 function initChart() {
   chart = LightweightCharts.createChart($('chart'), {
@@ -635,8 +549,8 @@ function initChart() {
     rightPriceScale: { borderColor: '#2a3240' }, crosshair: { mode: 0 }, autoSize: true,
   });
   series = chart.addCandlestickSeries({ upColor: '#26a69a', downColor: '#ef5350', borderVisible: false, wickUpColor: '#26a69a', wickDownColor: '#ef5350', priceFormat: { type: 'price', precision: 2, minMove: 0.01 } });
-  S.ema20s = chart.addLineSeries({ color: 'rgba(88,166,255,.7)', lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
-  S.ema50s = chart.addLineSeries({ color: 'rgba(227,179,65,.7)', lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
+  S.ema20s = chart.addLineSeries({ color: 'rgba(88,166,255,.5)', lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
+  S.ema50s = chart.addLineSeries({ color: 'rgba(227,179,65,.5)', lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
   // Stoch RSI pane (กราฟแยกด้านล่าง เลื่อน/ซูมตามกราฟหลัก)
   S.chart2 = LightweightCharts.createChart($('srsi'), {
     layout: { background: { color: '#161b22' }, textColor: '#8b949e', fontFamily: 'JetBrains Mono', fontSize: 10 },
@@ -658,14 +572,63 @@ function srsiState(k, d, k1, d1) {
 }
 const toCh = x => ({ time: x.t + CFG.TZ, open: x.o, high: x.h, low: x.l, close: x.c });
 
+// เงื่อนไขของ setup ตามลำดับในกฎ (รหัสตรงกับ evalBlocks)
+const CHECKS = [['bias', 'Bias H1 ตรงฝั่ง'], ['h4', 'H4 ไม่สวนชัด'], ['fvg', 'มี FVG เหนือ/ใต้ OB'], ['poi', 'Fibo 61.8–70.5 ทับ OB'],
+  ['risk', 'SL ≤ $' + CFG.SMC.MAX_RISK], ['rr', 'R:R ถึง TP1 ≥ ' + CFG.SMC.MIN_RR], ['eq', 'ไม่มี EQL/EQH หน้าโซน'], ['v', 'ไม่ย่อแรงแบบ V'],
+  ['mit', 'โซนยังไม่ถูกใช้'], ['obst', 'ไม่ติดโซนใหญ่ H1/H4'], ['sess', 'นอกช่วงเวลาห้าม'], ['news', 'ไม่ใกล้ข่าวแดง']];
+const sideTh = sd => sd === 'buy' ? 'Buy' : 'Sell';
+const stTh = { filled: '✅ ชน Limit — เข้าแล้ว', skipped: '⛔ ถึงโซนแต่ข้าม', expired: '⌛ หมดอายุ 24 ชม.', replaced: '↻ มี BOS ใหม่แทน' };
+const activeSetups = () => ['buy', 'sell'].map(sd => S.smc[sd].filter(s => s.st === 'wait').pop()).filter(Boolean);
+// 🧪 โหมดทดลอง: armed เมื่อผ่านเฉพาะเงื่อนไขใน CFG.EXP.NEED · SL = Entry ± $SL_USD
+const X = CFG.EXP;
+const xArmed = s => X.ON && s.side === X.SIDE && s.blocks && !s.blocks.some(b => X.NEED.includes(b.code)) && s.sg * (s.tp1 - s.entry) > 0;
+const xSL = (s, px) => (px == null ? s.entry : px) - s.sg * X.SL_USD;
+const xMiss = s => s.side !== X.SIDE ? 'ใช้เฉพาะฝั่ง ' + sideTh(X.SIDE) : (s.blocks || []).filter(b => X.NEED.includes(b.code)).map(b => b.text).join(' · ');
+
+function setupCard(s) {
+  const B = Object.fromEntries(s.blocks.map(b => [b.code, b.text])), last = S.bars.M5.at(-1);
+  const touched = s.sg > 0 ? last.l <= s.entry : last.h >= s.entry, onBias = S.allow === s.side;
+  const head = `${s.side === 'buy' ? '🟢' : '🔴'} <b>${sideTh(s.side)} Limit</b> <span class="mono">${fmt(s.entry)}</span>
+    ${s.armed ? '<b class="up">✅ ตั้งได้</b>' : `<b class="down">⛔ ไม่ตั้ง</b>`}
+    <span class="sum mono">SL ${fmt(s.sl)} · TP1 ${fmt(s.tp1)} · R:R ${s.rr1.toFixed(1)}</span>`;
+  const body = `
+    <div class="lvls mono"><span><b>Entry</b>${fmt(s.entry)}</span><span><b>SL ($${s.risk.toFixed(1)})</b>${fmt(s.sl)}</span>
+      <span><b>TP1 ${s.rr1.toFixed(1)}R</b>${fmt(s.tp1)}</span><span><b>TP2 ${s.rr2.toFixed(1)}R</b>${fmt(s.tp2)}</span></div>
+    <div class="checks">Entry = ${s.entryBy} · TP1 = Fibo 0% (ปิด 50% แล้วเลื่อน SL บังทุน) · TP2 = ${s.tp2By}</div>
+    <div class="checks">BOS ${fmtT(s.t0)} ${s.sg > 0 ? 'ทะลุ swing high' : 'หลุด swing low'} ${fmt(s.swing)} ด้วยแท่งตัวเต็ม ·
+      Fibo ${fmt(s.L)} → ${fmt(s.H)} · 61.8% ${fmt(s.f618)} · 70.5% ${fmt(s.f705)} ·
+      OB ${fmt(s.obLo)}–${fmt(s.obHi)} · FVG ${s.fvg ? fmt(s.fvg.lo) + '–' + fmt(s.fvg.hi) : 'ไม่มี'}</div>
+    <div class="ck">${CHECKS.map(([c, t]) => c === 'news' && !S.news ? `<span class="na">▫️ ${t} (ไม่มีปฏิทินข่าว — เช็กเอง)</span>`
+      : B[c] ? `<span class="no" title="${B[c]}">❌ ${B[c]}</span>` : `<span class="ok">✅ ${t}</span>`).join('')}</div>
+    <div class="checks">ราคาตอนนี้ห่าง Entry $${Math.abs(S.price - s.entry).toFixed(1)}${touched ? ' · <b style="color:var(--gold)">⚡ แท่งนี้แตะ Limit แล้ว (ยืนยันเมื่อแท่งปิด)</b>' : ''}
+      · หมดอายุ ${fmtT(s.t0 + CFG.SMC.EXPIRE_BARS * CFG.SMC.SEC)}${onBias ? '' : ' · สวน Bias ตอนนี้'}</div>
+    <div class="checks">ถ้าไม่ตั้ง Limit: รอแท่งกลับตัว (Engulfing / Pin bar) M5 ที่โซนแทนได้</div>`;
+  return cblk('setup' + s.side + s.t0, s.armed ? s.side : '', s.armed ? '' : 'opacity:.7', head, body);
+}
+
+function xCard() {
+  const s = activeSetups().find(x => x.side === X.SIDE), H = ((S.ladder && S.ladder.history) || []).filter(t => t.mode === X.TAG);
+  const done = H.filter(t => t.pnl != null && !['open', 'TP1', 'NOFILL'].includes(t.status)), pnl = done.reduce((a, t) => a + t.pnl, 0);
+  const ok = s && xArmed(s), sl = s && xSL(s);
+  const head = `${X.NAME} <b class="${ok ? 'down' : ''}">${!s ? '— ไม่มี setup Sell' : ok ? '✅ ตั้ง Sell Limit ได้' : '⛔ ไม่ตั้ง'}</b>
+    <span class="sum mono">FT ${done.length} ไม้ ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)}</span>`;
+  const body = (s ? `<div class="lvls mono"><span><b>Sell Limit</b>${fmt(s.entry)}</span><span><b>SL ($${X.SL_USD})</b>${fmt(sl)}</span>
+      <span><b>TP1 ${((s.entry - s.tp1) / X.SL_USD).toFixed(1)}R</b>${fmt(s.tp1)}</span><span><b>TP2 ${((s.entry - s.tp2) / X.SL_USD).toFixed(1)}R</b>${fmt(s.tp2)}</span></div>
+    <div class="checks">${ok ? `ตั้ง Sell Limit ${fmt(s.entry)} · SL ${fmt(sl)} · TP1 ${fmt(s.tp1)} ปิด 50% แล้วเลื่อน SL มาที่ Entry · TP2 ${fmt(s.tp2)} · ${X.LOT.toFixed(2)} lot` : 'ยังไม่ผ่าน: ' + xMiss(s)}</div>` : '')
+    + `<div class="checks">กติกา: Sell ที่ Bias H1 ขาลง + H4 ไม่ขึ้นชัด + มี FVG + Fibo 61.8–70.5 ทับ OB (ไม่ใช้ตัวกรองอื่น) · Limit จุดเดียวกับระบบหลัก · SL คงที่ $${X.SL_USD} · TP เหมือนระบบหลัก · lot คงที่ ${X.LOT.toFixed(2)} (แยกจากบันได)</div>
+    <div class="checks" style="color:var(--side)">Backtest M5 2025-06→2026-10: 145 ไม้ · win 27% · PF 1.55 (ครึ่งหลัง 2025 PF 1.52 / 2026 PF 1.56) · เข้าสุ่มแบบเดียวกัน PF 1.07 — เป็นสมมติฐานจากการลอง ~40 แบบ ใช้ demo / lot ต่ำสุดจนกว่า forward test เกิน 30 ไม้</div>`;
+  return cblk('x3', ok ? 'sell' : '', ok ? '' : 'opacity:.8', head, body);
+}
+
 function render() {
-  const T = S.trend, bs = S.biasScore;
-  const bl = bs >= 0.5 ? ['ฝั่ง Buy ได้เปรียบ', 'up'] : bs <= -0.5 ? ['ฝั่ง Sell ได้เปรียบ', 'down'] : bs > 0.15 ? ['เอียงขึ้น / กรอบ', 'side'] : bs < -0.15 ? ['เอียงลง / กรอบ', 'side'] : ['ไม่มีฝั่งได้เปรียบ (กรอบ)', 'side'];
-  const near = S.zones.slice().sort((a, b) => a.dist - b.dist)[0];
-  $('bias').innerHTML = `<span>ภาพรวม D/H4/H1:</span> <b class="${bl[1]}">${bl[0]}</b>
-    <span class="note">(คะแนนถ่วงน้ำหนัก ${bs.toFixed(2)})</span>
-    ${S.insideZone ? `<span class="tag">⚠️ ราคาอยู่ในโซน ${fmt(S.insideZone.lo)}–${fmt(S.insideZone.hi)}</span>` : ''}
-    ${near ? `<span class="note">โซนใกล้สุด: ${near.side === 'sell' ? '🔴 Sell' : '🟢 Buy'} ${fmt(near.lo)}–${fmt(near.hi)} (ห่าง $${near.dist.toFixed(1)})</span>` : ''}`;
+  const T = S.trend, C = CFG.SMC, now = Math.floor(Date.now() / 1000);
+  const why = S.allow ? '' : T.H1.dir >= 0.5 ? 'H1 ขึ้น แต่ H4 ลงชัด' : T.H1.dir <= -0.5 ? 'H1 ลง แต่ H4 ขึ้นชัด' : 'H1 ยังไม่มีทิศชัด';
+  const ss = sessionBlock(now), nw = newsBlock(now, S.news);
+  $('bias').innerHTML = `<span>Bias หลัก (H1 + H4):</span>
+    <b class="${S.allow === 'buy' ? 'up' : S.allow === 'sell' ? 'down' : 'side'}">${S.allow === 'buy' ? '▲ หาเฉพาะ Buy ใน M5' : S.allow === 'sell' ? '▼ หาเฉพาะ Sell ใน M5' : '◆ ไม่เทรด — ' + why}</b>
+    <span class="note">H1 ${T.H1.label} · H4 ${T.H4.label} · D ${T.D1.label}</span>
+    ${ss ? `<span class="tag against">⏰ ช่วง${ss} — ไม่ตั้ง Limit</span>` : ''}
+    ${nw ? `<span class="tag against">📰 ใกล้ข่าวแดง ${nw}</span>` : S.news ? '' : '<span class="tag">📰 ไม่มีปฏิทินข่าว — เช็กข่าวแดงเอง</span>'}`;
 
   const card = (name, t) => {
     const w = Math.min(Math.abs(t.score) / 8, 1) * 50, col = t.score >= 0 ? 'var(--up)' : 'var(--down)';
@@ -674,138 +637,146 @@ function render() {
       <div class="meter"><i style="background:${col};${t.score >= 0 ? 'left:50%' : `left:${50 - w}%`};width:${w}%"></i></div>
       <ul class="reasons">${t.reasons.map(r => `<li>${r}</li>`).join('')}</ul></div>`;
   };
-  const m = S.m15;
-  const m15state = m.adx < CFG.ADX_SIDEWAY ? ['Sideway / บีบตัว', 'side'] : m.e20 > m.e50 ? ['วิ่งขึ้น', 'up'] : ['วิ่งลง', 'down'];
-  $('cards').innerHTML = card('Daily (D1)', T.D1) + card('H4', T.H4) + card('H1', T.H1) +
-    `<div class="card"><h3><span>M15 (จังหวะเข้า)</span><span class="mono">ATR ${S.m15atr.toFixed(1)}</span></h3>
-      <div class="label ${m15state[1]}">${m15state[0]}</div>
+  const m = S.m5;
+  const m5state = m.adx < CFG.ADX_SIDEWAY ? ['Sideway / บีบตัว', 'side'] : m.e20 > m.e50 ? ['วิ่งขึ้น', 'up'] : ['วิ่งลง', 'down'];
+  $('cards').innerHTML = card('H1 (Bias หลัก)', T.H1) + card('H4 (ห้ามสวนชัด)', T.H4) + card('Daily (D1)', T.D1) +
+    `<div class="card"><h3><span>M5 (จังหวะเข้า)</span><span class="mono">ATR ${S.m5atr.toFixed(1)}</span></h3>
+      <div class="label ${m5state[1]}">${m5state[0]}</div>
       <ul class="reasons"><li>ADX ${m.adx.toFixed(1)} · RSI ${m.rsi.toFixed(1)}</li>
-      <li>Stoch(5,3,3) K ${m.stochK.toFixed(0)} / D ${m.stochD.toFixed(0)} ${m.stochK > 80 ? '— Overbought' : m.stochK < 20 ? '— Oversold' : ''}</li>
       <li>EMA20 ${fmt(m.e20)} ${m.e20 > m.e50 ? '>' : '<'} EMA50 ${fmt(m.e50)}</li>
-      <li>Stoch RSI K ${S.srsi.k.at(-1).toFixed(0)} / D ${S.srsi.d.at(-1).toFixed(0)} — ${srsiState(S.srsi.k.at(-1), S.srsi.d.at(-1), S.srsi.k.at(-2), S.srsi.d.at(-2))}</li></ul></div>`;
+      <li>Stoch RSI K ${S.srsi.k.at(-1).toFixed(0)} / D ${S.srsi.d.at(-1).toFixed(0)} — ${srsiState(S.srsi.k.at(-1), S.srsi.d.at(-1), S.srsi.k.at(-2), S.srsi.d.at(-2))}</li>
+      <li>ATR M5 $${S.m5atr.toFixed(1)} — SL จำกัด $${C.MAX_RISK} ${S.m5atr > C.MAX_RISK - C.SL_BUF ? '(แท่ง OB มักใหญ่เกิน → setup ผ่านยาก)' : ''}</li></ul></div>`;
 
-  // zones
-  const alignTag = z => z.align === 'with' ? '<span class="tag with">ตามเทรนด์ D</span>' : z.align === 'against' ? '<span class="tag against">สวนเทรนด์ D — TP เร็ว ลด lot</span>' : '<span class="tag">D เป็นกรอบ</span>';
-  const zr = z => z._r || (z._r = zoneReach(S, z));
-  const rc = p => p >= 60 ? 'var(--up)' : p >= 30 ? 'var(--side)' : 'var(--muted)';
-  const pf = p => p < 1 ? '<1%' : p.toFixed(0) + '%';
-  const zkey = z => z.side + Math.round(z.lo);
-  const zhtml = z => {
-    const L = tpLadder(S, z.side, z.entry, z.sl), closed = S.zonesClosed.has(zkey(z));
-    return `<div class="zone ${z.side}${closed ? ' closed' : ''}" data-k="${zkey(z)}"><div class="top" title="คลิกเพื่อย่อ/ขยาย">
-      <span class="rng mono ${z.side === 'sell' ? 'down' : 'up'}"><span class="chev">▼</span>${z.side === 'sell' ? '🔴 Sell' : '🟢 Buy'} ${fmt(z.lo)}–${fmt(z.hi)}<span class="sum mono">TP1R ${L.levels[0].p.toFixed(0)}%</span></span>
-      ${starsHtml(rating(z.score, 'M15'))}</div>
-      <div class="zbody">
-      <div class="meta">ราคามาถึงโซน: <b class="mono" style="color:${rc(zr(z).h4)}">4 ชม. ${pf(zr(z).h4)}</b> · <b class="mono" style="color:${rc(zr(z).h24)}">24 ชม. ${pf(zr(z).h24)}</b> · ห่าง ${zr(z).d.toFixed(1)}×ATR H1 (ราคาต้องวิ่ง${{ with: 'ตามเทรนด์ D', against: 'สวนเทรนด์ D', range: 'ในกรอบ D' }[zr(z).reg]}มาหาโซน)</div>
-      <div class="meta">${z.src.join(' · ')}</div>
-      <div class="plan mono">เข้า ~${fmt(z.entry)} · SL ${fmt(z.sl)}${z.liq != null ? ` (พ้น liquidity ${fmt(z.liq)})` : ''} · 1R = $${Math.abs(z.entry - z.sl).toFixed(1)}</div>
-      ${tpHtml(L)}
-      <div class="meta">Rating ${rating(z.score, 'M15')}/5 (คะแนน ${z.score.toFixed(1)}) · ห่าง $${z.dist.toFixed(1)} · ${alignTag(z)}</div></div></div>`;
-  };
-  const sells = S.zones.filter(z => z.side === 'sell').sort((a, b) => b.lo - a.lo), buys = S.zones.filter(z => z.side === 'buy');
-  $('zones').innerHTML = (sells.map(zhtml).join('') || '<div class="empty">ไม่มีโซน Sell ในระยะ</div>') +
-    `<div class="note mono" style="text-align:center;margin:6px 0">— ราคา ${fmt(S.price)} —</div>` +
-    (buys.map(zhtml).join('') || '<div class="empty">ไม่มีโซน Buy ในระยะ</div>');
-  syncZonesBtn();
-
-  // โซน H1
-  const zh1 = z => {
-    const r = zoneReach(S, z), k = 'h1' + z.side + Math.round(z.lo), closed = S.zonesH1Closed.has(k);
-    return `<div class="zone ${z.side}${closed ? ' closed' : ''}" data-k="${k}"><div class="top" title="คลิกเพื่อย่อ/ขยาย">
-      <span class="rng mono ${z.side === 'sell' ? 'down' : 'up'}"><span class="chev">▼</span>${z.side === 'sell' ? '🔴 แนวต้าน' : '🟢 แนวรับ'} ${fmt(z.lo)}–${fmt(z.hi)}</span>
-      ${starsHtml(rating(z.score, 'H1'))}</div>
-      <div class="zbody">
-      <div class="meta">ราคามาถึงโซน: <b class="mono" style="color:${rc(r.h4)}">4 ชม. ${pf(r.h4)}</b> · <b class="mono" style="color:${rc(r.h24)}">24 ชม. ${pf(r.h24)}</b> · ห่าง $${z.dist.toFixed(1)} (${r.d.toFixed(1)}×ATR H1)</div>
-      <div class="meta">${z.src.join(' · ')}</div>
-      <div class="meta">Rating ${rating(z.score, 'H1')}/5 (คะแนน ${z.score.toFixed(1)}) · ${z.side === 'sell' ? 'ถ้ามาถึง: ดูสัญญาณ Sell / จุดเก็บกำไรของ Buy' : 'ถ้ามาถึง: ดูสัญญาณ Buy / จุดเก็บกำไรของ Sell'}</div></div></div>`;
-  };
-  const h1s = S.zonesH1.filter(z => z.side === 'sell').sort((a, b) => b.lo - a.lo), h1b = S.zonesH1.filter(z => z.side === 'buy');
-  $('zonesH1').innerHTML = (h1s.map(zh1).join('') || '<div class="empty">ไม่มีแนวต้าน H1 ในระยะ</div>') +
-    `<div class="note mono" style="text-align:center;margin:6px 0">— ราคา ${fmt(S.price)}${S.insideZoneH1 ? ` · อยู่ในโซน H1 ${fmt(S.insideZoneH1.lo)}–${fmt(S.insideZoneH1.hi)}` : ''} —</div>` +
-    (h1b.map(zh1).join('') || '<div class="empty">ไม่มีแนวรับ H1 ในระยะ</div>');
-  syncZonesH1Btn();
-
-  // signals
-  const lastClosedT = S.bars.M15[S.bars.M15.length - 2].t, sigNow = S.signals.filter(s => s.t === lastClosedT);   // ไม่แสดงย้อนหลัง (กัน repaint)
-  $('signals').innerHTML = sigNow.length ? sigNow.map(s => {
-    if (s.kind === 'brk') return `<div class="sig brk">💥 <b>${fmtT(s.t)}</b> ปิดทะลุโซน ${fmt(s.z.lo)}–${fmt(s.z.hi)} ${s.side === 'up' ? 'ขึ้น' : 'ลง'} ที่ ${fmt(s.price)}
-      <div class="checks">โซนนี้กลายเป็น${s.side === 'up' ? 'แนวรับ' : 'แนวต้าน'} — รอรีเทสต์ก่อนเข้า</div></div>`;
-    return `<div class="sig ${s.side}">${s.side === 'sell' ? '🔻' : '🔺'} <b>${fmtT(s.t)}</b> กลับตัว${s.side === 'sell' ? 'ลง' : 'ขึ้น'} เกรด <b>${s.grade}</b> (เสริม ${s.passed}/3) ที่โซน ${fmt(s.z.lo)}–${fmt(s.z.hi)}
-      <div class="checks">${s.checks.map(c => (c[1] ? '✅ ' : '▫️ ') + c[0]).join(' · ')}</div>
-      <div class="checks mono">ปิดแท่ง ${fmt(s.price)} · SL ${fmt(s.sl)}</div></div>`;
-  }).join('') : '<div class="empty">แท่ง M15 ที่เพิ่งปิดไม่มีสัญญาณ — แสดงเฉพาะแท่งล่าสุด (ไม่ย้อนหลัง เพื่อไม่ให้ repaint)</div>';
-
-  // system
-  const st = S.sysState, C = CFG.SYS, dUpNow = S.trend.D1.dir >= 0.5;
+  // ระบบ SMC
+  const act = activeSetups().sort((a, b) => (b.side === S.allow) - (a.side === S.allow));
+  const ended = ['buy', 'sell'].flatMap(sd => S.smc[sd].filter(s => s.st !== 'wait')).sort((a, b) => b.endI - a.endI).slice(0, 6);
+  const nb = S.bars.M5.length - 2;
   $('system').innerHTML =
-    cblk('rule-buy', st.buyOn ? 'buy' : '', st.buyOn ? '' : 'opacity:.6',
-      `🟢 <b>Buy เมื่อกลับตัวที่โซน</b> ${st.buyOn ? '✅ เปิด' : '⛔ ปิด'}`,
-      `<div class="checks">${st.buyOn ? 'รอสัญญาณกลับตัวขึ้นที่โซน Buy' : 'ปิดอยู่'} — ต้อง D และ H4 ขาขึ้น (ตอนนี้ D ${S.trend.D1.label}, H4 ${S.trend.H4.label})</div>
-       <div class="checks">Pin bar / Bullish engulfing ที่โซน · SL ใต้ liquidity · TP ${C.BUY_TP_R}R หรือแนวต้าน H1 ถ้าขวางก่อน · backtest 2022–26: win 59.3% +0.06R/ไม้ PF 1.14 ~17 ไม้/เดือน · DD $503/0.01 lot · ซ้อนสูงสุด 5 ไม้</div>`) +
-    cblk('rule-sell', st.sellOn ? 'sell' : '', st.sellOn ? '' : 'opacity:.6',
-      `🔴 <b>Sell เมื่อ Sweep</b> ${st.sellOn ? '✅ เปิด' : '⛔ ปิด — ' + (dUpNow ? 'D' : 'H4') + ' เป็นขาขึ้น'}`,
-      `<div class="checks">${st.sellOn ? 'รอ sweep ที่โซน Sell' : 'ปิดอยู่'} — ต้อง D และ H4 ไม่ใช่ขาขึ้น (ตอนนี้ D ${S.trend.D1.label}, H4 ${S.trend.H4.label})</div>
-       <div class="checks">สัญญาณกลับตัวที่โซน + ไส้ทะลุ swing high ล่าสุดแล้วปิดกลับ · SL พ้น liquidity · TP ${C.SELL_TP_R}R หรือแนวรับ H1 ถ้าขวางก่อน · backtest 2022–26: win 63.9% +0.13R/ไม้ PF 1.37 ~3 ไม้/เดือน (สมมติฐาน — ต้อง forward test)</div>`) +
-    '<div id="sysSigs"></div>';
+    cblk('rules', '', '', '📖 <b>กฎระบบ SMC M5</b>',
+      `<div class="checks">1) Bias: H1 ขาขึ้น → หาเฉพาะ Buy · H1 ขาลง → หาเฉพาะ Sell · H4 ต้องไม่เป็นขาตรงข้ามชัด</div>
+       <div class="checks">2) M5 ปิดทะลุ swing ล่าสุดด้วยแท่งตัวเต็ม (เนื้อ ≥ ${C.DISP_BODY * 100}% · ยาว ≥ ${C.DISP_ATR}×ATR) = BOS/CHoCH →
+         OB = แท่งสวนทางแท่งสุดท้ายก่อนพุ่ง · FVG เหนือ/ใต้ OB · Fibo จากไส้ต่ำสุด→สูงสุดของคลื่น · POI = Fibo ${C.FIB_A * 100}–${C.FIB_B * 100}% ทับกล่อง OB</div>
+       <div class="checks">3) Limit ที่ขอบ OB (หรือ 61.8% ถ้า FVG คลุม) · SL พ้น OB $${C.SL_BUF} · TP1 = Fibo 0% ปิด 50% + บังทุน · TP2 = Fibo −0.27 หรือ EQH/EQL ถัดไป (M5/H1) · ถือไม่เกิน 24 ชม.</div>
+       <div class="checks">ข้ามเมื่อ: EQL/EQH หน้าโซน · ย่อแรงแบบ V · โซนถูกใช้แล้ว · SL &gt; $${C.MAX_RISK} หรือ R:R ถึง TP1 &lt; ${C.MIN_RR} · ติด OB/EQ ของ H1/H4 ก่อน TP1 · ${C.SESSION_BLOCK.map(w => w[2]).join(' · ')} · ข่าวแดง USD 30 นาทีก่อน–15 นาทีหลัง</div>
+       <div class="checks" style="color:var(--side)">Backtest M5 2025-06→2026-10 (โค้ดนี้, backtest/smc_backtest.js): ครบทุกกฎ = 14 ไม้ (0.9/เดือน) win 29% PF 0.64 ·
+         โครงสร้าง OB+FVG+Fibo ล้วน 923 ไม้ PF 0.87 · ตัวที่ตัดไม้มากสุดคือ SL ≤ $${C.MAX_RISK} — ยังไม่พบ edge</div>`) +
+    (X.ON ? xCard() : '') +
+    (act.length ? act.map(setupCard).join('') : `<div class="empty">ยังไม่มี setup ที่รอราคา — รอ M5 ทำ BOS ด้วยแท่งตัวเต็ม</div>`) +
+    (ended.length ? cblk('hist', '', '', '🕘 <b>setup ล่าสุดที่จบแล้ว</b> <span class="sum">(คิดจากแท่งย้อนหลังด้วย Bias ปัจจุบัน)</span>',
+      `<div class="hist mono">${ended.map(s => `${fmtT(S.bars.M5[s.endI].t)} ${sideTh(s.side)} ${fmt(s.entry)} — ${stTh[s.st]}${s.st === 'skipped' ? ': ' + s.blocks.map(b => b.text).join(' · ') : ''}${s.endI === nb && s.st === 'filled' ? ' (แท่งล่าสุด)' : ''}`).join('<br>')}</div>`) : '');
   syncSysBtn();
 
+  // โซนใหญ่ H1/H4
+  const range = 1.5 * T.D1.atr, live = S.htf.filter(z => z.tMit == null && z.lo <= S.price + range && z.hi >= S.price - range);
+  const hz = z => `<div class="hz ${z.side}"><span>${z.side === 'sell' ? '🔴' : '🟢'} <b>${z.tf}</b> ${z.kind === 'OB' ? (z.side === 'sell' ? 'Bearish OB' : 'Bullish OB') : (z.side === 'sell' ? 'EQH' : 'EQL')}</span>
+    <span class="mono">${fmt(z.lo)}–${fmt(z.hi)}</span><span class="mono note">ห่าง $${(z.side === 'sell' ? z.lo - S.price : S.price - z.hi).toFixed(1)}</span></div>`;
+  const up = live.filter(z => z.lo > S.price).sort((a, b) => b.lo - a.lo), dn = live.filter(z => z.hi < S.price).sort((a, b) => b.hi - a.hi), inn = live.filter(z => z.lo <= S.price && z.hi >= S.price);
+  $('htf').innerHTML = (up.map(hz).join('') || '<div class="empty">ไม่มีโซนเหนือราคาในระยะ</div>') +
+    `<div class="note mono" style="text-align:center;margin:6px 0">— ราคา ${fmt(S.price)}${inn.length ? ` · อยู่ในโซน ${inn.map(z => z.tf + ' ' + z.kind).join(', ')}` : ''} —</div>` +
+    (dn.map(hz).join('') || '<div class="empty">ไม่มีโซนใต้ราคาในระยะ</div>');
+
   // chart
-  const m15 = S.bars.M15.slice(-400);
-  series.setData(m15.map(toCh));
-  const mc = S.bars.M15.map(x => x.c), e20 = ema(mc, 20), e50 = ema(mc, 50), off = S.bars.M15.length - m15.length;
-  S.ema20s.setData(m15.map((x, i) => ({ time: x.t + CFG.TZ, value: e20[i + off] })));
-  S.ema50s.setData(m15.map((x, i) => ({ time: x.t + CFG.TZ, value: e50[i + off] })));
-  // Stoch RSI (ค่า null ช่วงต้นใช้ whitespace เพื่อให้แกนเวลาตรงกับกราฟหลัก)
+  const m5 = S.bars.M5.slice(-400);
+  series.setData(m5.map(toCh));
+  const mc = S.bars.M5.map(x => x.c), e20 = ema(mc, 20), e50 = ema(mc, 50), off = S.bars.M5.length - m5.length;
+  S.ema20s.setData(m5.map((x, i) => ({ time: x.t + CFG.TZ, value: e20[i + off] })));
+  S.ema50s.setData(m5.map((x, i) => ({ time: x.t + CFG.TZ, value: e50[i + off] })));
   const sr = S.srsi, pt = (x, v) => v == null ? { time: x.t + CFG.TZ } : { time: x.t + CFG.TZ, value: v };
-  S.srsiK.setData(m15.map((x, i) => pt(x, sr.k[i + off]))); S.srsiD.setData(m15.map((x, i) => pt(x, sr.d[i + off])));
+  S.srsiK.setData(m5.map((x, i) => pt(x, sr.k[i + off]))); S.srsiD.setData(m5.map((x, i) => pt(x, sr.d[i + off])));
   const r = chart.timeScale().getVisibleLogicalRange(); if (r) S.chart2.timeScale().setVisibleLogicalRange(r);
-  const P = CFG.STOCHRSI, ln = S.bars.M15.length - 1, k0 = sr.k[ln], d0 = sr.d[ln], k1 = sr.k[ln - 1], d1 = sr.d[ln - 1];
-  $('srsiLbl').innerHTML = `Stoch RSI (${P.K},${P.D},${P.RSI},${P.STOCH}) · <span style="color:#58a6ff">K ${k0.toFixed(1)}</span> · <span style="color:#f0883e">D ${d0.toFixed(1)}</span> · ${srsiState(k0, d0, k1, d1)} · ใช้ดูประกอบ — backtest ไม่พบว่าช่วยเพิ่ม win rate`;
+  const P = CFG.STOCHRSI, ln = S.bars.M5.length - 1, k0 = sr.k[ln], d0 = sr.d[ln], k1 = sr.k[ln - 1], d1 = sr.d[ln - 1];
+  $('srsiLbl').innerHTML = `Stoch RSI (${P.K},${P.D},${P.RSI},${P.STOCH}) · <span style="color:#58a6ff">K ${k0.toFixed(1)}</span> · <span style="color:#f0883e">D ${d0.toFixed(1)}</span> · ${srsiState(k0, d0, k1, d1)} · ใช้ดูประกอบ`;
   priceLines.forEach(l => series.removePriceLine(l)); priceLines = [];
-  S.zones.forEach(z => {
-    const color = z.side === 'sell' ? 'rgba(239,83,80,.85)' : 'rgba(38,166,154,.85)';
-    priceLines.push(series.createPriceLine({ price: z.hi, color, lineWidth: 1, lineStyle: 2, axisLabelVisible: false, title: '' }));
-    priceLines.push(series.createPriceLine({ price: z.lo, color, lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: `${z.side === 'sell' ? 'Sell' : 'Buy'} ${'★'.repeat(rating(z.score, 'M15'))}` }));
-  });
+  const pl = (price, color, style, title, w = 1) => priceLines.push(series.createPriceLine({ price, color, lineWidth: w, lineStyle: style, axisLabelVisible: !!title, title: title || '' }));
+  const main = act.find(s => s.side === S.allow) || act[0];
+  if (main) {
+    pl(main.obHi, 'rgba(188,140,255,.9)', 0, 'OB'); pl(main.obLo, 'rgba(188,140,255,.9)', 0, '');
+    if (main.fvg) { pl(main.fvg.hi, 'rgba(88,166,255,.8)', 2, 'FVG'); pl(main.fvg.lo, 'rgba(88,166,255,.8)', 2, ''); }
+    pl(main.f618, 'rgba(227,179,65,.7)', 3, '61.8'); pl(main.f705, 'rgba(227,179,65,.7)', 3, '70.5');
+    if (!main.armed) pl(main.entry, 'rgba(227,179,65,.5)', 1, 'Limit (ไม่ตั้ง)');
+    else { pl(main.entry, '#e3b341', 0, 'Limit', 2); pl(main.sl, '#ef5350', 0, 'SL', 2); pl(main.tp1, '#26a69a', 0, 'TP1', 2); pl(main.tp2, '#26a69a', 2, 'TP2', 1); }
+  }
+  const xs = activeSetups().find(x => x.side === X.SIDE);
+  if (xs && xArmed(xs)) { if (xs !== main || !main.armed) pl(xs.entry, '#e3b341', 2, '🧪 Limit', 2); pl(xSL(xs), '#ff7b72', 2, '🧪 SL $' + X.SL_USD, 1); }
   ['sell', 'buy'].forEach(sd => {
-    const z = S.zonesH1.filter(x => x.side === sd).sort((a, b) => a.dist - b.dist)[0]; if (!z) return;
-    const color = sd === 'sell' ? 'rgba(255,123,114,.9)' : 'rgba(86,211,100,.9)';
-    priceLines.push(series.createPriceLine({ price: z.hi, color, lineWidth: 2, lineStyle: 3, axisLabelVisible: false, title: '' }));
-    priceLines.push(series.createPriceLine({ price: z.lo, color, lineWidth: 2, lineStyle: 3, axisLabelVisible: true, title: `H1 ${sd === 'sell' ? 'ต้าน' : 'รับ'} ${'★'.repeat(rating(z.score, 'H1'))}` }));
+    const z = live.filter(x => x.side === sd && (sd === 'sell' ? x.lo > S.price : x.hi < S.price)).sort((a, b) => sd === 'sell' ? a.lo - b.lo : b.hi - a.hi)[0]; if (!z) return;
+    const color = sd === 'sell' ? 'rgba(255,123,114,.85)' : 'rgba(86,211,100,.85)';
+    pl(z.hi, color, 3, sd === 'sell' ? `${z.tf} ${z.kind === 'OB' ? 'OB' : 'EQH'}` : '', 2); pl(z.lo, color, 3, sd === 'buy' ? `${z.tf} ${z.kind === 'OB' ? 'OB' : 'EQL'}` : '', 2);
   });
+  const t0 = m5[0].t;
+  S.bosMarkers = ['buy', 'sell'].flatMap(sd => S.smc[sd]).filter(s => s.t0 >= t0).map(s => ({ time: s.t0 + CFG.TZ, position: s.sg > 0 ? 'belowBar' : 'aboveBar',
+    color: s.sg > 0 ? 'rgba(38,166,154,.7)' : 'rgba(239,83,80,.7)', shape: 'circle', text: 'BOS' }));
   renderSignals();
 }
 
-// สัญญาณระบบที่ "แจ้งจริง" เท่านั้น (จากบันทึก: server signals-log / localStorage บนมือถือ) — ไม่คำนวณย้อนหลัง จึงไม่ repaint
+// ไม้ที่ "เข้าจริง" เท่านั้น (จากบันทึก: server signals-log / localStorage บนมือถือ) — ไม่คำนวณย้อนหลัง จึงไม่ repaint
+const tradeSt = { open: '⏳ เปิดอยู่', TP1: '🟡 TP1 แล้ว (ถือครึ่งหลัง บังทุน)', SL: '❌ SL', 'TP1+BE': '✅ TP1 + บังทุน', TP2: '✅✅ TP2', TIME: '⌛ ครบ 24 ชม.', NOFILL: '— ไม่ชน Limit', TP: '✅ TP' };
 function renderSignals() {
   if (!S.bars || !series || !$('sysSigs')) return;
-  const T = (S.ladder && S.ladder.trades) || [];          // ใหม่ → เก่า
-  const stTxt = { open: '⏳ เปิดอยู่', TP: '✅ TP', SL: '❌ SL', TIME: '⌛ ครบ 24 ชม.' };
-  const card = t => cblk('sig' + t.key, t.side, t.status === 'open' ? '' : 'opacity:.75',
-    `${t.side === 'sell' ? '🔻 <b>SELL</b>' : '🔺 <b>BUY</b>'} <b>${fmtT(t.bar_time + 900)}</b> <span class="mono"><b style="color:var(--gold)">${(t.lot || 0.01).toFixed(2)} lot</b> @ ${fmt(t.entry)}</span>
-     <span class="sum">${stTxt[t.status] || ''}${t.pnl != null ? ` ${t.pnl >= 0 ? '+' : ''}$${t.pnl.toFixed(2)}` : ''}</span>`,
-    `<div class="checks mono" style="color:var(--text)">เข้า ${fmt(t.entry)} · SL ${fmt(t.sl)} · TP ${fmt(t.tp)} (${t.tpR}R) · เสี่ยง $${(+t.R).toFixed(1)}/0.01 lot</div>
-     <div class="checks">${t.why || ''}</div>${t.status === 'open' ? tpHtml(tpLadder(S, t.side, t.entry, t.sl)) : ''}`);
+  const T = ((S.ladder && (S.ladder.history || S.ladder.trades)) || []).filter(t => t.kind === 'smc').slice(0, 20);     // ใหม่ → เก่า (รวมไม้ทดลอง)
+  const card = t => cblk('sig' + t.key, t.side, t.status === 'open' || t.status === 'TP1' ? '' : 'opacity:.75',
+    `${t.mode ? '🧪 ' : ''}${t.side === 'sell' ? '🔻 <b>SELL</b>' : '🔺 <b>BUY</b>'} <b>${fmtT(t.bar_time)}</b> <span class="mono"><b style="color:var(--gold)">${(t.lot || 0.02).toFixed(2)} lot</b> @ ${fmt(t.entry)}</span>
+     <span class="sum">${tradeSt[t.status] || ''}${t.pnl != null ? ` ${t.pnl >= 0 ? '+' : ''}$${t.pnl.toFixed(2)}` : ''}</span>`,
+    `<div class="lvls mono"><span><b>Entry</b>${fmt(t.entry)}</span><span><b>SL</b>${fmt(t.sl)}</span><span><b>TP1 (50%)</b>${fmt(t.tp1)}</span><span><b>TP2</b>${fmt(t.tp2)}</span></div>
+     <div class="checks">เสี่ยง $${(+t.R).toFixed(1)} ต่อ 0.01 lot · ${t.why || ''}</div>`);
   $('sysSigs').innerHTML = T.length
-    ? `<div class="note" style="margin:6px 0 4px">สัญญาณที่แจ้งจริง (จากบันทึก — ไม่เปลี่ยนย้อนหลัง)</div>` + T.slice(0, 5).map(card).join('')
-    : '<div class="empty">ยังไม่มีสัญญาณที่แจ้ง — ระบบตรวจทุกครั้งที่แท่ง M15 ปิด</div>';
+    ? `<div class="note" style="margin:6px 0 4px">ไม้ที่ชน Limit จริง (จากบันทึก — ไม่เปลี่ยนย้อนหลัง)</div>` + T.slice(0, 5).map(card).join('')
+    : '<div class="empty" style="margin-top:6px">ยังไม่มีไม้ที่ชน Limit — ระบบตรวจทุกครั้งที่แท่ง M5 ปิด</div>';
   syncSysBtn();
-  const t0 = S.bars.M15[Math.max(0, S.bars.M15.length - 400)].t, seen = new Set();
-  series.setMarkers(T.filter(t => t.bar_time >= t0 && !seen.has(t.bar_time) && seen.add(t.bar_time)).map(t => ({
+  const t0 = S.bars.M5[Math.max(0, S.bars.M5.length - 400)].t, seen = new Set();
+  const tm = T.filter(t => t.bar_time >= t0 && !seen.has(t.bar_time) && seen.add(t.bar_time)).map(t => ({
     time: t.bar_time + CFG.TZ, position: t.side === 'sell' ? 'aboveBar' : 'belowBar', color: t.side === 'sell' ? '#ef5350' : '#26a69a',
-    shape: t.side === 'sell' ? 'arrowDown' : 'arrowUp', text: `${t.side === 'sell' ? 'SELL' : 'BUY'}${t.status === 'TP' ? ' ✓' : t.status === 'SL' ? ' ✗' : ''}` })).sort((a, b) => a.time - b.time));
+    shape: t.side === 'sell' ? 'arrowDown' : 'arrowUp', text: `${t.mode ? '🧪' : ''}${t.side === 'sell' ? 'SELL' : 'BUY'}${t.status === 'TP2' || t.status === 'TP1+BE' ? ' ✓' : t.status === 'SL' ? ' ✗' : ''}` }));
+  const bt = new Set(tm.map(x => x.time));
+  series.setMarkers([...tm, ...(S.bosMarkers || []).filter(x => !bt.has(x.time))].sort((a, b) => a.time - b.time));
   (S.tradeLines || []).forEach(l => series.removePriceLine(l)); S.tradeLines = [];
-  const open = T.find(t => t.status === 'open');
-  if (open) [['SL', open.sl, '#ef5350'], ['TP', open.tp, '#26a69a'], ['เข้า', open.entry, '#e3b341']].forEach(([t, p, c]) =>
+  const open = T.find(t => t.status === 'open' || t.status === 'TP1');
+  if (open) [['SL' + (open.status === 'TP1' ? ' → บังทุน' : ''), open.status === 'TP1' ? open.entry : open.sl, '#ef5350'], ['TP1', open.tp1, '#26a69a'], ['TP2', open.tp2, '#26a69a'], ['เข้า', open.entry, '#e3b341']].forEach(([t, p, c]) =>
     S.tradeLines.push(series.createPriceLine({ price: p, color: c, lineWidth: 2, lineStyle: 0, axisLabelVisible: true, title: t })));
 }
+
+// แจ้งเตือน Pending: ตั้ง / ย้าย / ยกเลิก Limit (จำใน localStorage กันแจ้งซ้ำข้าม reload)
+function pendingAlerts() {
+  let memo = {}; try { memo = JSON.parse(localStorage.getItem('pendAlerts') || '{}'); } catch (e) { }
+  const all = ['buy', 'sell'].flatMap(sd => S.smc[sd]), keys = new Set();
+  const modes = [{ pre: '', name: '', act: activeSetups(), armed: s => s.armed, sl: s => s.sl, filled: s => s.st === 'filled', why: s => s.blocks.map(b => b.text).join(' · ') }];
+  if (X.ON) modes.push({ pre: 'x', name: X.NAME + ': ', act: activeSetups().filter(s => s.side === X.SIDE), armed: xArmed, sl: s => xSL(s),
+    filled: s => s.st === 'filled' || s.st === 'skipped', why: xMiss });
+  for (const M of modes) {
+    for (const s of M.act) {
+      const key = M.pre + s.side + s.t0, m = memo[key], on = M.armed(s); keys.add(key);
+      const lv = `${fmt(s.entry)} · SL ${fmt(M.sl(s))} · TP1 ${fmt(s.tp1)} · TP2 ${fmt(s.tp2)}`;
+      if (on && (!m || !m.armed)) { memo[key] = { armed: true, entry: s.entry }; notifyMsg(`📌 ${M.name}ตั้ง ${sideTh(s.side)} Limit ${lv}`, 'p' + key); }
+      else if (on && Math.abs(m.entry - s.entry) >= 0.5) { memo[key] = { armed: true, entry: s.entry }; notifyMsg(`↕️ ${M.name}ย้าย ${sideTh(s.side)} Limit ไป ${lv}`, 'p' + key); }
+      else if (!on && m && m.armed) { memo[key] = { armed: false, entry: s.entry }; notifyMsg(`⛔ ${M.name}ยกเลิก ${sideTh(s.side)} Limit ${fmt(m.entry)} — ${M.why(s)}`, 'p' + key); }
+    }
+    for (const key in memo) {
+      if (keys.has(key) || (M.pre ? !key.startsWith(M.pre) : key.startsWith('x'))) continue;
+      const s = all.find(x => M.pre + x.side + x.t0 === key);
+      if (memo[key].armed && s && !M.filled(s)) notifyMsg(`⛔ ${M.name}ยกเลิก ${sideTh(s.side)} Limit ${fmt(memo[key].entry)} — ${stTh[s.st]}${s.st === 'skipped' ? ': ' + M.why(s) : ''}`, 'p' + key);
+      delete memo[key];
+    }
+  }
+  try { localStorage.setItem('pendAlerts', JSON.stringify(memo)); } catch (e) { }
+}
+// ไม้ที่ชน Limit ในแท่งที่เพิ่งปิด → บันทึก
+const newFills = () => { const nb = S.bars.M5.length - 2; return ['buy', 'sell'].flatMap(sd => S.smc[sd]).filter(s => s.st === 'filled' && s.endI === nb); };
+const fillRec = x => ({ key: x.side + x.t0, kind: 'smc', tf: CFG.SMC.TF, tf_sec: CFG.SMC.SEC, side: x.side, bar_time: S.bars.M5[x.endI].t, entry: +x.fillPx.toFixed(3), sl: +x.sl.toFixed(3),
+  tp1: +x.tp1.toFixed(3), tp2: +x.tp2.toFixed(3), R: +Math.abs(x.fillPx - x.sl).toFixed(2),
+  why: `BOS ${fmtT(x.t0)} · OB ${fmt(x.obLo)}–${fmt(x.obHi)} · Fibo ${fmt(x.L)}→${fmt(x.H)} · Entry ${x.entryBy} · TP2 ${x.tp2By}` });
+// 🧪 ไม้ทดลอง: Sell ที่ถึงจุด Limit ในแท่งที่เพิ่งปิด (ระบบหลักจะ filled หรือ skipped ก็ได้) และผ่านเงื่อนไขทดลองก่อนแท่งนั้น
+const xFills = () => { if (!X.ON) return []; const nb = S.bars.M5.length - 2; return S.smc[X.SIDE].filter(s => (s.st === 'filled' || s.st === 'skipped') && s.endI === nb && xArmed(s)); };
+const xRec = x => ({ ...fillRec(x), key: X.TAG + x.side + x.t0, mode: X.TAG, lot: X.LOT, level: 0, sl: +xSL(x, x.fillPx).toFixed(3), R: X.SL_USD,
+  why: `${X.NAME} · BOS ${fmtT(x.t0)} · OB ${fmt(x.obLo)}–${fmt(x.obHi)} · Fibo ${fmt(x.L)}→${fmt(x.H)} · TP2 ${x.tp2By}` });
+const allFillRecs = () => [...newFills().map(fillRec), ...xFills().map(xRec)];
+const fillMsg = (r, lot) => `${r.mode ? X.NAME + ': ' : ''}✅ ${sideTh(r.side)} Limit ชนแล้ว ${lot.toFixed(2)} lot @ ${fmt(r.entry)} · SL ${fmt(r.sl)} · TP1 ${fmt(r.tp1)} (ปิด ${(lot / 2).toFixed(2)} + บังทุน) · TP2 ${fmt(r.tp2)}`;
 
 /* MOBILE DATA — Twelve Data (แท่งเทียน) + gold-api.com (ราคาสด) · ไม่มี server */
 const LS = { get: (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
              set: (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } } };
-const TF = { M15: ['15min', 600, 900], H1: ['1h', 500, 3600], H4: ['4h', 400, 14400], D1: ['1day', 300, 86400] };
-const FETCH = { M15: 600, H1: 2200, D1: 300 };          // H4 + D1 ล่าสุด ประกอบจาก H1 (ให้ขอบแท่งตรง Exness)
-const MOB = { TICK_MS: 5000, M15_REFRESH_MS: 5 * 60e3, HTF_REFRESH_MS: 60 * 60e3 };
+const TF = { M5: ['5min', 2000, 300], H1: ['1h', 500, 3600], H4: ['4h', 400, 14400], D1: ['1day', 300, 86400] };
+const FETCH = { M5: 2000, H1: 2200, D1: 300 };          // H4 + D1 ล่าสุด ประกอบจาก H1 (ให้ขอบแท่งตรง Exness)
+const MOB = { TICK_MS: 5000, M5_REFRESH_MS: 5 * 60e3, HTF_REFRESH_MS: 60 * 60e3 };
 S.key = LS.get('tdKey', ''); S.trades = LS.get('trades', []); S.credits = 0;
 
 const parseT = dt => Date.parse(dt.length <= 10 ? dt + 'T00:00:00Z' : dt.replace(' ', 'T') + 'Z') / 1000;
@@ -844,41 +815,41 @@ function aggregate(bars, per, key) {                       // รวมแท่
   }
   return out;
 }
-// raw = { M15, H1 (ยาว), D1 (TD ตัดวันแบบ NY) } → bars ตรง Exness: M15/H1 กรองช่วงปิดตลาด · H4/D1 ล่าสุด ประกอบจาก H1
+// raw = { M5, H1 (ยาว), D1 (TD ตัดวันแบบ NY) } → bars ตรง Exness: M5/H1 กรองช่วงปิดตลาด · H4/D1 ล่าสุด ประกอบจาก H1
 function buildBars(raw) {
-  const m15 = raw.M15.filter(b => marketOpen(b.t)), h1 = raw.H1.filter(b => marketOpen(b.t));
+  const m5 = raw.M5.filter(b => marketOpen(b.t)), h1 = raw.H1.filter(b => marketOpen(b.t));
   const h4 = aggregate(h1, 14400).slice(-TF.H4[1]);
   const dH1 = aggregate(h1, 86400), firstFull = dH1.length > 1 ? dH1[1].t : Infinity;     // วันแรกของ H1 อาจไม่ครบวัน → ตัด
   const dOld = raw.D1.filter(b => { const wd = new Date(b.t * 1000).getUTCDay(); return wd !== 0 && wd !== 6 && b.t < firstFull; });
   const d1 = dOld.concat(dH1.filter(b => b.t >= firstFull)).slice(-TF.D1[1]);
-  return { M15: m15.slice(-TF.M15[1]), H1: h1.slice(-TF.H1[1]), H4: h4, D1: d1, h1all: h1 };
+  return { M5: m5.slice(-TF.M5[1]), H1: h1.slice(-TF.H1[1]), H4: h4, D1: d1, h1all: h1 };
 }
 /* END PIPELINE */
 // ราคาสดจาก gold-api → อัปเดตแท่งที่กำลังก่อตัวทุก TF (แก้ให้ตรงด้วย Twelve Data ทุก 5 นาที)
 function applyTick(p, now) {
-  let newM15 = false;
-  for (const tf of ['M15', 'H1', 'H4', 'D1']) {
+  let newM5 = false;
+  for (const tf of ['M5', 'H1', 'H4', 'D1']) {
     const arr = S.bars[tf], per = TF[tf][2], start = Math.floor(now / per) * per, last = arr[arr.length - 1];
     if (last && last.t === start) { last.h = Math.max(last.h, p); last.l = Math.min(last.l, p); last.c = p; }
-    else if (last && start > last.t && marketOpen(now)) { arr.push({ t: start, o: p, h: p, l: p, c: p }); if (tf === 'M15') newM15 = true; }
+    else if (last && start > last.t && marketOpen(now)) { arr.push({ t: start, o: p, h: p, l: p, c: p }); if (tf === 'M5') newM5 = true; }
   }
-  return newM15;
+  return newM5;
 }
 async function loadAll() {
   if (!S.key) { openSettings('ใส่ API key ของ Twelve Data ก่อนใช้งาน'); setStatus(false, 'ยังไม่ได้ใส่ API key'); return false; }
   setStatus(true, 'กำลังโหลดแท่งเทียน…');
-  S.raw = { D1: await tdSeries('1day', FETCH.D1), H1: await tdSeries('1h', FETCH.H1), M15: await tdSeries('15min', FETCH.M15) };
-  S.bars = buildBars(S.raw); S.lastHTF = Date.now(); S.lastM15Fix = Date.now();
+  S.raw = { D1: await tdSeries('1day', FETCH.D1), H1: await tdSeries('1h', FETCH.H1), M5: await tdSeries('5min', FETCH.M5) };
+  S.bars = buildBars(S.raw); S.lastHTF = Date.now(); S.lastM5Fix = Date.now();
   await tick(true);
   return true;
 }
 function rebuild() {                                         // คงแท่งที่กำลังก่อตัวจาก tick ไว้ถ้า TD ยังไม่มี
-  const live = { M15: S.bars.M15.at(-1), H1: S.bars.H1.at(-1), H4: S.bars.H4.at(-1), D1: S.bars.D1.at(-1) };
+  const live = { M5: S.bars.M5.at(-1), H1: S.bars.H1.at(-1), H4: S.bars.H4.at(-1), D1: S.bars.D1.at(-1) };
   S.bars = buildBars(S.raw);
   for (const tf in live) { const a = S.bars[tf], l = live[tf]; if (l && (!a.length || l.t > a.at(-1).t)) a.push(l); }
 }
-async function refreshM15() {
-  upsert(S.raw.M15, await tdSeries('15min', 4), FETCH.M15); rebuild(); S.lastM15Fix = Date.now();
+async function refreshM5() {
+  upsert(S.raw.M5, await tdSeries('5min', 4), FETCH.M5); rebuild(); S.lastM5Fix = Date.now();
 }
 async function refreshHTF() {
   upsert(S.raw.H1, await tdSeries('1h', 5), FETCH.H1); rebuild(); S.lastHTF = Date.now();
@@ -893,10 +864,10 @@ async function tick(force) {
     const now = Math.floor(Date.now() / 1000), sp = await spot();
     S.price = sp.price; S.tick = null;
     const newBar = applyTick(sp.price, now);
-    if (Date.now() - S.lastM15Fix > MOB.M15_REFRESH_MS) await refreshM15();
+    if (Date.now() - S.lastM5Fix > MOB.M5_REFRESH_MS) await refreshM5();
     if (Date.now() - S.lastHTF > MOB.HTF_REFRESH_MS) await refreshHTF();
     if (force || newBar || Date.now() - (S.lastCalc || 0) > CFG.POLL_FULL_MS) recalc();
-    else { series.update(toCh(S.bars.M15.at(-1))); }
+    else { series.update(toCh(S.bars.M5.at(-1))); }
     showPrice();
     setStatus(true, `XAU/USD · Twelve Data + gold-api · ${marketOpen(now) ? 'ตลาดเปิด' : '⏸ ตลาดปิด'} · วิเคราะห์ล่าสุด ${fmtT(Math.floor((S.lastCalc || Date.now()) / 1000))} · ใช้โควตาไป ${S.credits} ครั้ง (รอบนี้)`);
   } catch (e) { setStatus(false, 'ผิดพลาด: ' + e.message); }
@@ -906,13 +877,20 @@ function recalc() {
   S.lastCalc = Date.now();
 }
 
-/* บันได B + forward test ในเครื่อง (localStorage) — กติกาเดียวกับ server: SL ก่อน · ครบ 24 ชม. ปิดที่ราคา */
-const LOTS = { 1: 0.01, 2: 0.02 };
+/* บันได B + forward test ในเครื่อง (localStorage) — กติกาเดียวกับ server: SL ก่อน · TP1 ปิด 50% + บังทุน · ครบ 24 ชม. ปิดที่ราคา */
+const LOTS = { 1: 0.02, 2: 0.04 };
 function evalTrades() {
-  const m = S.bars.M15, now = Math.floor(Date.now() / 1000);
+  const m = S.bars.M5, closedBars = m.slice(0, -1), now = Math.floor(Date.now() / 1000);
   for (const t of S.trades) {
-    if (t.status !== 'open') continue;
-    const sg = t.side === 'buy' ? 1 : -1, t0 = t.bar_time + 900, t1 = t0 + 86400;
+    if (t.status !== 'open' && t.status !== 'TP1') continue;
+    if (t.kind === 'smc') {                                  // ระบบ SMC: ใช้ smcOutcome ตัวเดียวกับ backtest (แท่ง M5)
+      const fi = closedBars.findIndex(b => b.t === t.bar_time); if (fi < 0) continue;
+      const o = smcOutcome(closedBars, fi, t);
+      t.status = o.status;
+      if (o.r != null) Object.assign(t, { exit: o.exit, exit_time: o.exitT, pnl: +(o.r * t.R * t.lot * 100).toFixed(2) });
+      continue;
+    }
+    const sg = t.side === 'buy' ? 1 : -1, t0 = t.bar_time + 900, t1 = t0 + 86400;   // ระบบเดิม (ก่อน 2026-11-18)
     for (const b of m) {
       if (b.t < t0 || b.t >= t1) continue;
       const hs = sg > 0 ? b.l <= t.sl : b.h >= t.sl, ht = sg > 0 ? b.h >= t.tp : b.l <= t.tp;
@@ -925,43 +903,88 @@ function evalTrades() {
   LS.set('trades', S.trades);
 }
 function ladderState() {
-  const closed = S.trades.filter(t => t.status !== 'open').sort((a, b) => a.exit_time - b.exit_time), last = closed.at(-1);
+  const main = S.trades.filter(t => !t.mode);                 // บันได/สถิติกล่องบันได = ระบบหลัก · ไม้ทดลองอยู่ใน history
+  const closed = main.filter(t => t.status !== 'open' && t.status !== 'TP1' && t.status !== 'NOFILL').sort((a, b) => a.exit_time - b.exit_time), last = closed.at(-1);
   const level = last && last.pnl > 0 ? 2 : 1;
-  const reason = !last ? 'ยังไม่มีไม้ที่ปิด → เริ่มขั้น 1' : `ไม้ล่าสุด${last.pnl > 0 ? 'ชนะ' : 'แพ้'} (${last.status} ${last.pnl >= 0 ? '+' : ''}${last.pnl.toFixed(2)}$) → ขั้น ${level}`;
-  return { level, lot: LOTS[level], reason, trades: S.trades.slice(-10).reverse(), open: S.trades.filter(t => t.status === 'open').length,
+  const reason = !last ? 'ยังไม่มีไม้ที่ปิด → เริ่มขั้น 1' : `ไม้ล่าสุด${last.pnl > 0 ? 'ได้กำไร' : 'ขาดทุน'} (${last.status} ${last.pnl >= 0 ? '+' : ''}${last.pnl.toFixed(2)}$) → ขั้น ${level}`;
+  return { level, lot: LOTS[level], reason, trades: main.slice(-10).reverse(), history: S.trades.slice().reverse(), open: main.filter(t => t.status === 'open' || t.status === 'TP1').length,
            closed: closed.length, wins: closed.filter(t => t.pnl > 0).length, pnl_total: +closed.reduce((x, t) => x + t.pnl, 0).toFixed(2) };
 }
 function alertNew() {
-  const lastClosed = S.bars.M15[S.bars.M15.length - 2].t;
-  for (const x of S.sys) {
-    if (x.t !== lastClosed) continue;                          // แจ้งเฉพาะแท่งที่เพิ่งปิด
-    const key = x.side + x.t;
-    const old = S.trades.find(t => t.key === key);
-    if (old) { x.lot = old.lot; continue; }                    // เคยแจ้งแล้ว (จำข้าม reload ใน localStorage)
-    const L = ladderState();
-    S.trades.push({ key, side: x.side, bar_time: x.t, entry: x.entry, sl: x.sl, tp: x.tp, tpR: x.tpR, R: x.R, why: x.why, lot: L.lot, level: L.level, status: 'open' });
-    if (S.trades.length > 300) S.trades.splice(0, S.trades.length - 300);
-    LS.set('trades', S.trades); x.lot = L.lot;
-    notify(`${x.side === 'sell' ? 'SELL' : 'BUY'} ${L.lot.toFixed(2)} lot @ ${fmt(x.entry)} · SL ${fmt(x.sl)} · TP ${fmt(x.tp)} (${x.tpR}R)`, key);
+  pendingAlerts();
+  for (const rec of allFillRecs()) {
+    if (S.trades.find(t => t.key === rec.key)) continue;     // เคยบันทึกแล้ว (จำข้าม reload ใน localStorage)
+    const L = rec.mode ? { lot: rec.lot, level: 0 } : ladderState();   // โหมดทดลอง: lot คงที่
+    S.trades.push({ ...rec, lot: L.lot, level: L.level, status: 'open' });
+    if (S.trades.length > 2000) S.trades.splice(0, S.trades.length - 2000);
+    LS.set('trades', S.trades);
+    notifyMsg(fillMsg(rec, L.lot), 'f' + rec.key);
   }
   S.ladder = ladderState(); renderLadder();
 }
+const notifyMsg = (msg, tag) => notify(msg, tag);
 async function notify(msg, tag) {
   beep(); try { navigator.vibrate && navigator.vibrate([200, 100, 200]); } catch (e) { }
   if (!(S.notify && 'Notification' in window && Notification.permission === 'granted')) return;
-  try { const reg = await navigator.serviceWorker.ready; await reg.showNotification('XAU Trend Radar', { body: msg, tag, icon: 'icon-192.png', badge: 'icon-192.png' }); }
-  catch (e) { try { new Notification('XAU Trend Radar', { body: msg }); } catch (e2) { } }
+  try { const reg = await navigator.serviceWorker.ready; await reg.showNotification('XAU SMC Radar', { body: msg, tag, icon: 'icon-192.png', badge: 'icon-192.png' }); }
+  catch (e) { try { new Notification('XAU SMC Radar', { body: msg }); } catch (e2) { } }
 }
 function renderLadder() {
   const L = S.ladder, el = $('ladder'); if (!L || !el) return;
-  const stTxt = { open: '⏳ เปิดอยู่', TP: '✅ TP', SL: '❌ SL', TIME: '⌛ ครบ 24 ชม.' };
   el.innerHTML = cblk('ladder', '', 'border-color:var(--gold)',
     `📶 <b>บันได B — lot ไม้ถัดไป: <span class="mono" style="color:var(--gold);font-size:16px">${L.lot.toFixed(2)}</span></b> (ขั้น ${L.level})
      <span class="sum mono">FT ${L.closed} ไม้ ${L.pnl_total >= 0 ? '+' : ''}$${L.pnl_total.toFixed(2)}</span>`,
-    `<div class="checks">${L.reason} · กติกา: ไม้ล่าสุดที่ปิดชนะ → 0.02 · แพ้ → 0.01</div>
-     <div class="checks">forward test: ปิดแล้ว ${L.closed} ไม้ · ชนะ ${L.wins} ไม้${L.closed ? ` (${(100 * L.wins / L.closed).toFixed(0)}%)` : ''} · รวม ${L.pnl_total >= 0 ? '+' : ''}$${L.pnl_total.toFixed(2)} · เปิดอยู่ ${L.open} ไม้</div>
-     ${L.trades.length ? `<div class="checks mono" style="margin-top:4px">${L.trades.map(t => `${fmtT(t.bar_time + 900)} ${t.side.toUpperCase()} ${(t.lot || 0.01).toFixed(2)} @ ${fmt(t.entry)} → ${stTxt[t.status]}${t.pnl != null ? ` ${t.pnl >= 0 ? '+' : ''}$${t.pnl.toFixed(2)}` : ''}`).join('<br>')}</div>` : ''}`);
-  syncSysBtn(); renderSignals();
+    `<div class="checks">${L.reason} · กติกา: ไม้ล่าสุดที่ปิดได้กำไร → 0.04 · ขาดทุน → 0.02 (ต้องแบ่งปิด 50% ที่ TP1 จึงเริ่มที่ 0.02)</div>
+     <div class="checks">forward test: ปิดแล้ว ${L.closed} ไม้ · กำไร ${L.wins} ไม้${L.closed ? ` (${(100 * L.wins / L.closed).toFixed(0)}%)` : ''} · รวม ${L.pnl_total >= 0 ? '+' : ''}$${L.pnl_total.toFixed(2)} · เปิดอยู่ ${L.open} ไม้</div>
+     ${L.trades.length ? `<div class="checks mono" style="margin-top:4px">${L.trades.map(t => `${fmtT(t.bar_time)} ${t.side.toUpperCase()} ${(t.lot || 0.02).toFixed(2)} @ ${fmt(t.entry)} → ${tradeSt[t.status] || t.status}${t.pnl != null ? ` ${t.pnl >= 0 ? '+' : ''}$${t.pnl.toFixed(2)}` : ''}`).join('<br>')}</div>` : ''}`);
+  syncSysBtn(); renderSignals(); renderHistory();
+}
+// 📜 History Forward Test — ทุกไม้ในบันทึก (PC: server signals-log.jsonl · มือถือ: localStorage) · ผลตรวจด้วยกติกาเดียวกับบันได
+const ftOpen = t => t.status === 'open' || t.status === 'TP1';
+const ftDone = t => t.pnl != null && !ftOpen(t) && t.status !== 'NOFILL';
+const ftUsd = v => `${v >= 0 ? '+' : '−'}$${Math.abs(v).toFixed(2)}`;
+const ftMon = t => new Date((t + CFG.TZ) * 1000).toISOString().slice(0, 7);
+function ftSide() { try { return localStorage.getItem('ftSide') || 'all'; } catch (e) { return 'all'; } }
+function setFtSide(v) { try { localStorage.setItem('ftSide', v); } catch (e) { } renderHistory(); }
+function ftRows() {   // ใหม่ → เก่า · ทั้งหมด/Buy/Sell = ระบบหลัก · x3 = โหมดทดลอง
+  const sd = ftSide(), H = (S.ladder && (S.ladder.history || S.ladder.trades)) || [];
+  return sd === 'x3' ? H.filter(t => t.mode === 'x3') : H.filter(t => !t.mode && (sd === 'all' || t.side === sd));
+}
+function renderHistory() {
+  const el = $('ftHist'); if (!el || !S.ladder) return;
+  const sd = ftSide(); document.querySelectorAll('#ftPanel [data-ft]').forEach(b => b.classList.toggle('on', b.dataset.ft === sd));
+  const R = ftRows(), C = R.filter(ftDone).sort((a, b) => a.exit_time - b.exit_time);
+  if (!R.length) { el.innerHTML = `<div class="empty">ยังไม่มีไม้${sd === 'x3' ? 'ของ ' + X.NAME : sd === 'all' ? 'ของระบบหลัก' : ' ' + sd.toUpperCase() + ' ของระบบหลัก'}ในบันทึก — forward test เริ่มนับเมื่อราคาชน Limit ไม้แรก</div>`; return; }
+  let eq = 0, peak = 0, dd = 0, run = 0, maxL = 0; const pts = [0];
+  for (const t of C) { eq += t.pnl; pts.push(eq); peak = Math.max(peak, eq); dd = Math.max(dd, peak - eq); run = t.pnl < 0 ? run + 1 : 0; maxL = Math.max(maxL, run); }
+  const W = C.filter(t => t.pnl > 0), Ls = C.filter(t => t.pnl < 0), gw = W.reduce((x, t) => x + t.pnl, 0), gl = -Ls.reduce((x, t) => x + t.pnl, 0);
+  const pf = gl > 0 ? (gw / gl).toFixed(2) : gw > 0 ? '∞' : '—', nOpen = R.filter(ftOpen).length, nNo = R.filter(t => t.status === 'NOFILL').length;
+  const k = (lab, v, cls = '') => `<div>${lab}<b class="${cls}">${v}</b></div>`;
+  let svg = '';
+  if (pts.length > 2) {
+    const lo = Math.min(0, ...pts), hi = Math.max(0, ...pts), sp = hi - lo || 1, X = i => (i / (pts.length - 1) * 600).toFixed(1), Y = v => (84 - (v - lo) / sp * 78).toFixed(1);
+    svg = `<div class="ftsub">Equity (ปิดแล้ว ${C.length} ไม้)</div><svg id="ftEq" viewBox="0 0 600 90" preserveAspectRatio="none"><line x1="0" x2="600" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--muted)" stroke-dasharray="3 3" stroke-width="1" vector-effect="non-scaling-stroke"/><polyline fill="none" stroke="${eq >= 0 ? 'var(--up)' : 'var(--down)'}" stroke-width="2" vector-effect="non-scaling-stroke" points="${pts.map((v, i) => X(i) + ',' + Y(v)).join(' ')}"/></svg>`;
+  }
+  const M = {}; for (const t of C) { const m = ftMon(t.exit_time), o = M[m] || (M[m] = { n: 0, w: 0, p: 0 }); o.n++; o.w += t.pnl > 0; o.p += t.pnl; }
+  const mon = Object.keys(M).sort().reverse().map(m => `<tr><td>${m}</td><td>${M[m].n}</td><td>${M[m].w}</td><td>${(100 * M[m].w / M[m].n).toFixed(0)}%</td><td class="${M[m].p >= 0 ? 'up' : 'down'}">${ftUsd(M[m].p)}</td></tr>`).join('');
+  const hold = t => t.exit_time ? ((t.exit_time - t.bar_time) / 3600).toFixed(1) + ' ชม.' : '';
+  const rows = R.map(t => `<tr><td>${fmtT(t.bar_time)}</td><td class="l ${t.side === 'buy' ? 'up' : 'down'}">${t.side.toUpperCase()}</td><td>${(t.lot || 0.02).toFixed(2)}</td><td>${fmt(t.entry)}</td><td>${fmt(t.sl)}</td><td>${t.tp1 != null ? fmt(t.tp1) : '—'}</td><td>${t.tp2 != null ? fmt(t.tp2) : t.tp != null ? fmt(t.tp) : '—'}</td>`
+    + `<td class="l">${tradeSt[t.status] || t.status}</td><td>${t.exit != null ? fmt(t.exit) : ''}</td><td>${t.exit_time ? fmtT(t.exit_time) : ''}</td><td>${hold(t)}</td><td class="${t.pnl > 0 ? 'up' : t.pnl < 0 ? 'down' : ''}">${t.pnl != null ? ftUsd(t.pnl) : ''}</td></tr>`).join('');
+  el.innerHTML = `<div class="ftk">${k('ไม้ที่ชน Limit', R.length)}${k('ปิดแล้ว', C.length)}${k('ชนะ / แพ้', `${W.length} / ${Ls.length}`)}${k('Win rate', C.length ? (100 * W.length / C.length).toFixed(0) + '%' : '—')}`
+    + `${k('กำไรสุทธิ', ftUsd(eq), eq >= 0 ? 'up' : 'down')}${k('PF', pf)}${k('เฉลี่ย/ไม้', C.length ? ftUsd(eq / C.length) : '—')}${k('Max DD', '$' + dd.toFixed(2))}${k('แพ้ติดกันสูงสุด', maxL)}${k('เปิดอยู่', nOpen)}</div>`
+    + `<div class="note">${sd === 'x3' ? X.NAME + ' (lot คงที่ ' + X.LOT.toFixed(2) + ')' : 'ระบบหลัก'} · เริ่มบันทึก ${fmtT(R.at(-1).bar_time)} · ชนะ = ปิดได้ $ บวก (TP1 + บังทุนนับเป็นชนะ) · ไม่นับไม้ NOFILL${nNo ? ` (${nNo} ไม้)` : ''} · คิดเงินจาก lot ตามบันไดที่แอปแจ้ง ถ้าเข้าจริงไม่ตรง ผลจะต่าง</div>`
+    + svg
+    + (mon ? `<div class="ftsub">รายเดือน (นับตามวันปิดไม้)</div><div class="ftwrap" style="max-height:200px"><table class="fttab"><tr><th>เดือน</th><th>ไม้</th><th>ชนะ</th><th>Win</th><th>กำไร</th></tr>${mon}</table></div>` : '')
+    + `<div class="ftsub">ทุกไม้ (ใหม่ → เก่า)</div><div class="ftwrap"><table class="fttab"><tr><th>เข้า</th><th class="l">ฝั่ง</th><th>Lot</th><th>Entry</th><th>SL</th><th>TP1</th><th>TP2</th><th class="l">ผล</th><th>ออก</th><th>เวลาออก</th><th>ถือ</th><th>$</th></tr>${rows}</table></div>`;
+}
+function ftCsv() {
+  const R = ftRows(); if (!R.length) return;
+  const iso = t => t ? new Date((t + CFG.TZ) * 1000).toISOString().slice(0, 16).replace('T', ' ') : '';
+  const cols = ['key', 'mode', 'side', 'entry_th', 'lot', 'level', 'entry', 'sl', 'tp1', 'tp2', 'R', 'status', 'exit', 'exit_th', 'pnl', 'why'];
+  const q = v => { v = v == null ? '' : String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+  const lines = [cols.join(',')].concat(R.slice().reverse().map(t => cols.map(c => q(c === 'entry_th' ? iso(t.bar_time) : c === 'exit_th' ? iso(t.exit_time) : c === 'tp2' && t.tp2 == null ? t.tp : t[c])).join(',')));
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['\ufeff' + lines.join('\n')], { type: 'text/csv;charset=utf-8' }));
+  a.download = 'xau-smc-forward-test.csv'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
 }
 function beep() { try { const a = new AudioContext(), o = a.createOscillator(), g = a.createGain(); o.connect(g); g.connect(a.destination); o.frequency.value = 880; g.gain.value = .1; o.start(); o.stop(a.currentTime + .25); } catch (e) { } }
 
@@ -971,37 +994,9 @@ const conv = a => a.map(r => ({ t: r[0], o: r[1], h: r[2], l: r[3], c: r[4] }));
 function showPrice() {
   const prev = S.bars.D1.at(-2).c, ch = S.price - prev;
   $('price').innerHTML = `${fmt(S.price)} <span class="${ch >= 0 ? 'up' : 'down'}" style="font-size:14px">${ch >= 0 ? '+' : ''}${ch.toFixed(2)}</span>`;
-  document.title = `${fmt(S.price)} · XAU Trend Radar`;
+  document.title = `${fmt(S.price)} · XAU SMC Radar`;
 }
 
-$('btnZones').onclick = () => {
-  const els = [...document.querySelectorAll('#zones .zone')], anyOpen = els.some(el => !el.classList.contains('closed'));
-  S.zonesAllClosed = anyOpen;
-  els.forEach(el => { el.classList.toggle('closed', anyOpen); anyOpen ? S.zonesClosed.add(el.dataset.k) : S.zonesClosed.delete(el.dataset.k); });
-  if (!anyOpen) S.zonesClosed.clear();
-  syncZonesBtn();
-};
-$('zones').addEventListener('click', e => {
-  const top = e.target.closest('.zone .top'); if (!top) return;
-  const el = top.parentElement, closed = el.classList.toggle('closed');
-  closed ? S.zonesClosed.add(el.dataset.k) : S.zonesClosed.delete(el.dataset.k);
-  if (!closed) S.zonesAllClosed = false;
-  syncZonesBtn();
-});
-$('btnZonesH1').onclick = () => {
-  const els = [...document.querySelectorAll('#zonesH1 .zone')], anyOpen = els.some(el => !el.classList.contains('closed'));
-  S.zonesH1AllClosed = anyOpen;
-  els.forEach(el => { el.classList.toggle('closed', anyOpen); anyOpen ? S.zonesH1Closed.add(el.dataset.k) : S.zonesH1Closed.delete(el.dataset.k); });
-  if (!anyOpen) S.zonesH1Closed.clear();
-  syncZonesH1Btn();
-};
-$('zonesH1').addEventListener('click', e => {
-  const top = e.target.closest('.zone .top'); if (!top) return;
-  const el = top.parentElement, closed = el.classList.toggle('closed');
-  closed ? S.zonesH1Closed.add(el.dataset.k) : S.zonesH1Closed.delete(el.dataset.k);
-  if (!closed) S.zonesH1AllClosed = false;
-  syncZonesH1Btn();
-});
 $('btnSys').onclick = () => {
   const els = [...document.querySelectorAll('#sysPanel .cb')], anyOpen = els.some(el => !el.classList.contains('closed'));
   S.sysAllClosed = anyOpen;
