@@ -65,17 +65,46 @@ main{padding:16px;display:grid;gap:16px;max-width:1500px;margin:0 auto}
 button{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:5px 10px;font-family:inherit;cursor:pointer}
 button:hover{border-color:var(--accent)}
 .note{font-size:12px;color:var(--muted);line-height:1.6}
-body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
+body{padding-bottom:calc(62px + env(safe-area-inset-bottom))}
+main{grid-template-columns:minmax(0,1fr)}
+.grid2{grid-template-columns:minmax(0,1fr)!important}
+header{position:sticky;top:0;z-index:20;padding-top:calc(10px + env(safe-area-inset-top))!important}
+.tabhide{display:none!important}
+#tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;background:var(--panel);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
+#tabs button{flex:1;border:0;border-radius:0;background:none;padding:7px 0 6px;font-size:11px;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:1px;position:relative}
+#tabs button i{font-style:normal;font-size:19px;filter:grayscale(1);opacity:.7}
+#tabs button.on{color:var(--gold)} #tabs button.on i{filter:none;opacity:1}
+#tabs button.alert:after{content:'';position:absolute;top:6px;left:calc(50% + 10px);width:8px;height:8px;border-radius:50%;background:var(--gold)}
+.now{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:grid;gap:8px}
+.now.buy{border-color:rgba(38,166,154,.6);background:rgba(38,166,154,.07)} .now.sell{border-color:rgba(239,83,80,.6);background:rgba(239,83,80,.07)}
+.now .hd{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.now .big{font-size:18px;font-weight:700}
+.now .sub{font-size:12px;color:var(--muted);line-height:1.55}
+.now .lvls span{font-size:12px;padding:5px 4px}
+.now .row{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:6px 0;border-top:1px solid var(--line)}
+details.legend summary{cursor:pointer;color:var(--accent);margin:6px 0}
+#ftPanel h2.ph{flex-wrap:wrap}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
 .modal.show{display:flex}
 .modal .box{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;width:100%;max-width:440px}
 .modal input{width:100%;padding:10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:14px;margin:6px 0 10px}
 .modal .row{display:flex;gap:8px;flex-wrap:wrap}
 @media (max-width:640px){
-  header{padding:10px 12px;gap:8px}
-  header h1{font-size:15px}
-  #price{font-size:20px}
-  #status{margin-left:0;width:100%;text-align:left;font-size:11px}
+  header{padding:10px 12px 8px;gap:4px 8px}
+  header h1{display:none}
+  #price{font-size:24px}
+  #btnNotify{margin-left:auto}
+  header button{padding:6px 10px}
+  #status{margin-left:0;width:100%;text-align:left;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .bias{gap:6px 10px} .bias b{font-size:16px;width:100%}
+  .cards{grid-template-columns:minmax(0,1fr)}
+  #ftHist .ftk{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+  #ftHist .ftk div{padding:6px 8px}
+  #ftHist .ftk b{font-size:15px}
+  #ftHist>.ftwrap:last-child .fttab td.l{white-space:normal;min-width:64px}
+  #ftHist .fttab{font-size:11px} #ftHist .fttab :is(th,td){padding:4px 5px}
+  .now .row>span:first-child{white-space:nowrap}
+  #ftHist>.ftwrap:last-child .fttab :is(th,td):is(:nth-child(3),:nth-child(5),:nth-child(6),:nth-child(7),:nth-child(9),:nth-child(10),:nth-child(11)){display:none}
   main{padding:10px;gap:12px}
   #chart{height:300px}
   #srsi{height:110px}
@@ -141,28 +170,35 @@ body{padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bot
   แจ้งเตือนทำงานเฉพาะตอนเปิดแอปไว้ · โควตาฟรี 800 ครั้ง/วัน แอปใช้ ~315 ครั้ง/วันถ้าเปิดค้างทั้งวัน (เปิดแอป 3 ครั้ง + M5 ทุก 5 นาที + H1 ทุกชั่วโมง)</div>
 </div></div>
 <main>
+  <div class="now" id="now"></div>
   <div class="bias" id="bias">กำลังวิเคราะห์…</div>
   <div class="cards" id="cards"></div>
   <div class="grid2">
-    <div>
+    <div id="chartBox">
       <div id="chart"></div>
       <div id="srsi"></div>
       <div class="srsi-lbl mono" id="srsiLbl"></div>
-      <p class="note">กราฟ M5 (เวลาไทย) · ม่วง = กล่อง OB · ฟ้า = FVG · ทองประ = Fibo 61.8/70.5 · ทองทึบ = จุดตั้ง Limit · แดง = SL · เขียว = TP1/TP2 · เส้นประหนา = โซนใหญ่ H1/H4 ที่ใกล้สุด · ● BOS = จุดทำลายโครงสร้าง · ลูกศร = ไม้ที่เข้าจริง</p>
+      <details class="note legend"><summary>คำอธิบายเส้นบนกราฟ</summary>กราฟ M5 (เวลาไทย) · ม่วง = กล่อง OB · ฟ้า = FVG · ทองประ = Fibo 61.8/70.5 · ทองทึบ = จุดตั้ง Limit · แดง = SL · เขียว = TP1/TP2 · เส้นประหนา = โซนใหญ่ H1/H4 ที่ใกล้สุด · ● BOS = จุดทำลายโครงสร้าง · ลูกศร = ไม้ที่เข้าจริง</details>
     </div>
     <div style="display:grid;gap:16px;align-content:start">
       <div class="panel" style="border-color:var(--gold)" id="sysPanel"><h2 class="ph">📋 ระบบ SMC M5 <button id="btnSys" aria-expanded="true" title="ย่อ/ขยายรายละเอียดทุกส่วน">▾ ย่อทั้งหมด</button></h2><div id="ladder"></div><div id="system"></div><div id="sysSigs"></div></div>
-      <div class="panel"><h2>🧱 โซนใหญ่ H1 / H4 <span class="note">(Bearish/Bullish OB ที่ยังไม่ถูกใช้ + EQH/EQL ที่ยังไม่ถูกกวาด)</span></h2><div id="htf"></div></div>
+      <div class="panel" id="htfPanel"><h2>🧱 โซนใหญ่ H1 / H4 <span class="note">(Bearish/Bullish OB ที่ยังไม่ถูกใช้ + EQH/EQL ที่ยังไม่ถูกกวาด)</span></h2><div id="htf"></div></div>
     </div>
   </div>
   <div class="panel" id="ftPanel"><h2 class="ph">📜 History Forward Test <span class="ftb"><button data-ft="all" onclick="setFtSide('all')">ทั้งหมด</button><button data-ft="buy" onclick="setFtSide('buy')">Buy</button><button data-ft="sell" onclick="setFtSide('sell')">Sell</button><button data-ft="x3" onclick="setFtSide('x3')" title="โหมดทดลอง Sell SL $3">🧪 Sell $3</button><button onclick="ftCsv()" title="ดาวน์โหลดประวัติเป็น CSV">⬇ CSV</button></span></h2><div id="ftHist"><div class="empty">กำลังโหลด…</div></div></div>
-  <p class="note">
+  <p class="note" id="foot">
     แอปนี้อ่านอย่างเดียว ไม่ส่งออเดอร์ · ข้อมูลจาก Twelve Data + gold-api.com (ราคาอาจต่างจากโบรกเล็กน้อย) ·
     ระบบ: Bias จาก H1 (H4 ต้องไม่สวนชัด) → M5 ทะลุ swing ด้วยแท่งตัวเต็ม (BOS/CHoCH) → OB (แท่งสวนทางแท่งสุดท้าย) + FVG เหนือ/ใต้ OB + Fibo 61.8–70.5% ทับกล่อง OB →
     ตั้ง Limit · SL พ้น OB $2 · TP1 = Fibo 0% (ปิด 50% + บังทุน) · TP2 = Fibo −0.27 หรือ EQH/EQL ถัดไป ·
     ข้ามเมื่อ: EQL/EQH หน้าโซน · ย่อแรงแบบ V · โซนถูกใช้แล้ว · SL &gt; $5 หรือ R:R &lt; 1.5 · ติดโซนใหญ่ H1/H4 · 06:00–12:00 / 19:15–20:30 · ก่อนข่าวแดง 30 นาที
   </p>
 </main>
+<nav id="tabs">
+  <button data-tab="home"><i>🏠</i>ภาพรวม</button>
+  <button data-tab="sys"><i>📋</i>ระบบ</button>
+  <button data-tab="trend"><i>📈</i>เทรนด์/โซน</button>
+  <button data-tab="hist"><i>📜</i>ประวัติ</button>
+</nav>
 
 <script>
 /* CONFIG */
@@ -873,7 +909,7 @@ async function tick(force) {
   } catch (e) { setStatus(false, 'ผิดพลาด: ' + e.message); }
 }
 function recalc() {
-  analyze(S); evalTrades(); S.ladder = ladderState(); render(); renderLadder(); alertNew();
+  analyze(S); evalTrades(); S.ladder = ladderState(); render(); renderLadder(); alertNew(); renderNow();
   S.lastCalc = Date.now();
 }
 
@@ -1029,6 +1065,41 @@ $('keySave').onclick = async () => {
   catch (e) { $('settingsNote').textContent = '❌ ' + e.message; }
 };
 $('ladderReset').onclick = () => { if (!confirm('ล้างประวัติบันไดและ forward test ทั้งหมด?')) return; S.trades = []; LS.set('trades', []); if (S.bars) recalc(); };
+// แท็บล่าง
+const TABS = { home: ['now', 'bias', 'chartBox'], sys: ['sysPanel'], trend: ['cards', 'htfPanel'], hist: ['ftPanel', 'foot'] };
+function setTab(t, keep) {
+  if (!TABS[t]) t = 'home';
+  for (const k in TABS) TABS[k].forEach(id => $(id) && $(id).classList.toggle('tabhide', k !== t));
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+  LS.set('tab', t); if (!keep) window.scrollTo(0, 0);
+}
+document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => setTab(b.dataset.tab));
+setTab(LS.get('tab', 'home'), true);
+// การ์ด "ตอนนี้" — สรุปสิ่งที่ต้องทำ (ตั้ง Limit / ไม้ที่เปิดอยู่ / รอ)
+function renderNow() {
+  const el = $('now'); if (!el || !S.smc) return;
+  const act = activeSetups(), arm = act.filter(s => s.armed), L = S.ladder || {};
+  const xs = X.ON ? act.find(s => s.side === X.SIDE && xArmed(s)) : null;
+  const open = (L.history || []).filter(t => t.kind === 'smc' && (t.status === 'open' || t.status === 'TP1'));
+  const lv = (a, b, c, d) => `<div class="lvls mono"><span><b>Limit</b>${fmt(a)}</span><span><b>SL</b>${fmt(b)}</span><span><b>TP1</b>${fmt(c)}</span><span><b>TP2</b>${fmt(d)}</span></div>`;
+  let cls = '', big, body = '';
+  if (arm.length) {
+    const s = arm[0]; cls = s.side;
+    big = `📌 ตั้ง <span class="${s.side === 'buy' ? 'up' : 'down'}">${s.side.toUpperCase()} Limit</span>`;
+    body = arm.map(s => lv(s.entry, s.sl, s.tp1, s.tp2) + `<div class="sub">${L.lot ? (L.lot).toFixed(2) + ' lot · ' : ''}TP1 ปิด 50% แล้วเลื่อน SL บังทุน · หมดอายุ ${fmtT(s.t0 + CFG.SMC.EXPIRE_BARS * CFG.SMC.SEC)}</div>`).join('');
+  } else if (open.length) { big = '⏳ มีไม้เปิดอยู่'; }
+  else {
+    big = '<span class="side">⏸ รอ setup</span>';
+    const w = act[0];
+    body = `<div class="sub">${w ? `${w.side.toUpperCase()} ${fmt(w.entry)} — ไม่ตั้ง: ${w.blocks.map(b => b.text).join(' · ')}` : 'ยังไม่มี setup — รอ M5 ทำ BOS ด้วยแท่งตัวเต็มตาม Bias'}</div>`;
+  }
+  if (xs) body += `<div class="row"><span>🧪 Sell $${X.SL_USD}</span><span class="mono">Limit ${fmt(xs.entry)} · SL ${fmt(xSL(xs))} · ${X.LOT.toFixed(2)} lot</span></div>`;
+  body += open.map(t => `<div class="row"><span>${t.mode ? '🧪 ' : ''}<b class="${t.side === 'buy' ? 'up' : 'down'}">${t.side.toUpperCase()}</b> ${(t.lot || 0.02).toFixed(2)} @ <span class="mono">${fmt(t.entry)}</span></span><span>${tradeSt[t.status]}</span></div>`).join('');
+  el.className = 'now ' + cls;
+  el.innerHTML = `<div class="hd"><span class="big">${big}</span><span class="sub mono">lot ถัดไป ${L.lot ? L.lot.toFixed(2) : '—'}</span></div>${body}
+    <div class="sub">FT ${L.closed || 0} ไม้ ${(L.pnl_total || 0) >= 0 ? '+' : ''}$${(L.pnl_total || 0).toFixed(2)} · ดูรายละเอียดที่แท็บ 📋 ระบบ</div>`;
+  const tb = document.querySelector('#tabs [data-tab=home]'); if (tb) tb.classList.toggle('alert', !!(arm.length || xs));
+}
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => { });
 initChart();
 loadAll().catch(e => setStatus(false, 'ผิดพลาด: ' + e.message));
