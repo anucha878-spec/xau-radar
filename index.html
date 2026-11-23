@@ -178,19 +178,19 @@ details.legend summary{cursor:pointer;color:var(--accent);margin:6px 0}
       <div id="chart"></div>
       <div id="srsi"></div>
       <div class="srsi-lbl mono" id="srsiLbl"></div>
-      <details class="note legend"><summary>คำอธิบายเส้นบนกราฟ</summary>กราฟ M5 (เวลาไทย) · ม่วง = กล่อง OB · ฟ้า = FVG · ทองประ = Fibo 61.8/70.5 · ทองทึบ = จุดตั้ง Limit · แดง = SL · เขียว = TP1/TP2 · เส้นประหนา = โซนใหญ่ H1/H4 ที่ใกล้สุด · ● BOS = จุดทำลายโครงสร้าง · ลูกศร = ไม้ที่เข้าจริง</details>
+      <details class="note legend"><summary>คำอธิบายเส้นบนกราฟ</summary>กราฟ M5 (เวลาไทย) · ม่วง = กล่อง OB · ฟ้า = FVG · ทองประ = Fibo 61.8/78.6 · ทองทึบ = จุดตั้ง Limit · แดง = SL · เขียว = TP1/TP2 · เส้นประหนา = โซนใหญ่ H1/H4 ที่ใกล้สุด · ● BOS = จุดทำลายโครงสร้าง · ลูกศร = ไม้ที่เข้าจริง</details>
     </div>
     <div style="display:grid;gap:16px;align-content:start">
       <div class="panel" style="border-color:var(--gold)" id="sysPanel"><h2 class="ph">📋 ระบบ SMC M5 <button id="btnSys" aria-expanded="true" title="ย่อ/ขยายรายละเอียดทุกส่วน">▾ ย่อทั้งหมด</button></h2><div id="ladder"></div><div id="system"></div><div id="sysSigs"></div></div>
       <div class="panel" id="htfPanel"><h2>🧱 โซนใหญ่ H1 / H4 <span class="note">(Bearish/Bullish OB ที่ยังไม่ถูกใช้ + EQH/EQL ที่ยังไม่ถูกกวาด)</span></h2><div id="htf"></div></div>
     </div>
   </div>
-  <div class="panel" id="ftPanel"><h2 class="ph">📜 History Forward Test <span class="ftb"><button data-ft="all" onclick="setFtSide('all')">ทั้งหมด</button><button data-ft="buy" onclick="setFtSide('buy')">Buy</button><button data-ft="sell" onclick="setFtSide('sell')">Sell</button><button data-ft="x3" onclick="setFtSide('x3')" title="โหมดทดลอง Sell SL $3">🧪 Sell $3</button><button onclick="ftCsv()" title="ดาวน์โหลดประวัติเป็น CSV">⬇ CSV</button></span></h2><div id="ftHist"><div class="empty">กำลังโหลด…</div></div></div>
+  <div class="panel" id="ftPanel"><h2 class="ph">📜 History Forward Test <span class="ftb"><button data-ft="all" onclick="setFtSide('all')">ทั้งหมด</button><button data-ft="buy" onclick="setFtSide('buy')">Buy</button><button data-ft="sell" onclick="setFtSide('sell')">Sell</button><button onclick="ftCsv()" title="ดาวน์โหลดประวัติเป็น CSV">⬇ CSV</button></span></h2><div id="ftHist"><div class="empty">กำลังโหลด…</div></div></div>
   <p class="note" id="foot">
     แอปนี้อ่านอย่างเดียว ไม่ส่งออเดอร์ · ข้อมูลจาก Twelve Data + gold-api.com (ราคาอาจต่างจากโบรกเล็กน้อย) ·
-    ระบบ: Bias จาก H1 (H4 ต้องไม่สวนชัด) → M5 ทะลุ swing ด้วยแท่งตัวเต็ม (BOS/CHoCH) → OB (แท่งสวนทางแท่งสุดท้าย) + FVG เหนือ/ใต้ OB + Fibo 61.8–70.5% ทับกล่อง OB →
-    ตั้ง Limit · SL พ้น OB $2 · TP1 = Fibo 0% (ปิด 50% + บังทุน) · TP2 = Fibo −0.27 หรือ EQH/EQL ถัดไป ·
-    ข้ามเมื่อ: EQL/EQH หน้าโซน · ย่อแรงแบบ V · โซนถูกใช้แล้ว · SL &gt; $5 หรือ R:R &lt; 1.5 · ติดโซนใหญ่ H1/H4 · 06:00–12:00 / 19:15–20:30 · ก่อนข่าวแดง 30 นาที
+    ระบบ: Bias จาก H1 (H4 ต้องไม่สวนชัด) → M5 ทะลุ swing ด้วยแท่งตัวเต็ม (BOS/CHoCH) → OB (แท่งสวนทางแท่งสุดท้าย) + FVG เหนือ/ใต้ OB + Fibo 61.8–78.6% ทับกล่อง OB →
+    ตั้ง Limit · SL คงที่ $3 · TP1 = Fibo 0% (ปิด 50% + บังทุน) · TP2 = Fibo −0.27 หรือ EQH/EQL ถัดไป ·
+    ข้ามเฉพาะ: ไม่มี FVG · Fibo ไม่ทับ OB · ไม่ตรง Bias · ข่าวแดง 30 นาทีก่อน–15 นาทีหลัง
   </p>
 </main>
 <nav id="tabs">
@@ -217,8 +217,11 @@ const CFG = {
     PIVOT: 3,                // swing M5 = fractal 3 แท่งซ้าย/ขวา (ยืนยันเมื่อแท่งขวาปิดครบ)
     DISP_BODY: 0.6,          // แท่ง Displacement: เนื้อเทียน ≥ 60% ของแท่ง
     DISP_ATR: 1.0,           //   และความยาวแท่ง ≥ 1×ATR(M5)
-    FIB_A: 0.618, FIB_B: 0.705, FIB_EXT: 0.27,   // POI = Fibo 61.8–70.5% · TP2 = Fibo −0.27
-    SL_BUF: 2.0,             // SL พ้นกล่อง OB $2.0 (200 จุด)
+    FIB_A: 0.618, FIB_B: 0.786, FIB_EXT: 0.27,   // POI = Fibo 61.8–78.6% (เดิม 70.5 · เปลี่ยน 2026-11-24) · TP2 = Fibo −0.27
+    SL_USD: 3,               // SL คงที่ Entry ± $3 (2026-11-24, backtest/summary-article-2026-11-24.md · เดิม OB ± $2)
+    SL_BUF: 2.0,             // (ไม่ใช้แล้ว) SL พ้นกล่อง OB $2.0
+    // เงื่อนไขที่ใช้ตัดสินตั้ง Limit (2026-11-24) · ตัวอื่นยังคำนวณไว้ (allBlocks) แต่ไม่ใช้: risk rr eq v mit obst sess
+    FILTERS: ['bias', 'h4', 'fvg', 'poi', 'news'],
     MAX_RISK: 5,             // ระยะ Entry→SL เกิน $5 → ข้าม
     MIN_RR: 1.5,             // R:R ถึง TP1 ต่ำกว่า 1.5 → ข้าม
     PARTIAL: 0.5,            // ปิดที่ TP1 50% แล้วเลื่อน SL บังทุน
@@ -237,7 +240,11 @@ const CFG = {
   },
   // 🧪 โหมดทดลอง (2026-11-19, backtest/summary-m5-entry-sltp-2026-11-19.md): Sell ที่โครงสร้าง (FVG + Fibo ทับ OB) และ Bias ผ่าน
   // ไม่ใช้ตัวกรองอื่น · Limit จุดเดียวกับระบบหลัก · SL คงที่ $3 · TP1 Fibo 0 ปิด 50% + บังทุน · TP2 เดิม · lot คงที่ (ไม่ใช้บันได)
-  EXP: { ON: true, SIDE: 'sell', SL_USD: 3, LOT: 0.02, NEED: ['fvg', 'poi', 'bias', 'h4'], TAG: 'x3', NAME: '🧪 ทดลอง Sell SL $3' },
+  // Kelly Criterion f* = W − (1 − W) / R (2026-11-24) · W = win rate · R = กำไรเฉลี่ย ÷ ขาดทุนเฉลี่ย (หน่วย R)
+  // ค่า backtest จากโค้ดแอป M5 2025-06→2026-10 (backtest/smc_backtest.js m5-sl3) · ใช้ค่า forward test แทนเมื่อปิดครบ MIN_FT ไม้
+  KELLY: { BT: { all: { n: 452, W: 0.279, R: 3.44 }, buy: { n: 257, W: 0.288, R: 2.93 }, sell: { n: 195, W: 0.267, R: 4.16 } },
+           MIN_FT: 30, FRACS: [0.25, 0.5, 1], LOT_STEP: 0.02, MIN_LOT: 0.02, BAL_DEFAULT: 1000 },
+  EXP: { ON: false, SIDE: 'sell', SL_USD: 3, LOT: 0.02, NEED: ['fvg', 'poi', 'bias', 'h4'], TAG: 'x3', NAME: '🧪 ทดลอง Sell SL $3' },
 };
 
 /* INDICATORS */
@@ -432,10 +439,10 @@ function smcScan(bReal, side, ctx) {
     }
     const r = s.H - s.L;
     s.f618 = s.H - C.FIB_A * r; s.f705 = s.H - C.FIB_B * r; s.f50 = s.H - 0.5 * r; s.fExt = s.H + C.FIB_EXT * r;
-    s.poi = !!s.fvg && s.obHi >= s.f705 && s.obLo <= s.f618;            // Fibo 61.8–70.5 ทับกล่อง OB
+    s.poi = !!s.fvg && s.obHi >= s.f705 && s.obLo <= s.f618;            // Fibo 61.8–FIB_B ทับกล่อง OB (f705 = เส้น FIB_B)
     const fvgAt618 = s.fvg && s.fvg.lo <= s.f618 && s.f618 <= s.fvg.hi;
     s.entry = fvgAt618 ? s.f618 : s.obHi; s.entryBy = fvgAt618 ? 'Fibo 61.8% (FVG คลุม)' : 'ขอบ OB';
-    s.sl = s.obLo - C.SL_BUF; s.risk = s.entry - s.sl; s.tp1 = s.H;
+    s.sl = s.entry - C.SL_USD; s.risk = s.entry - s.sl; s.tp1 = s.H;
     // TP2 = Fibo −0.27 หรือ EQH ถัดไป (M5 / H1) ถ้าถึงก่อน
     const T = b[i].t, tol = C.EQ_TOL_ATR * A[i]; let tgt = null;
     for (let q = Math.max(1, lowerIdx(hs, i - C.EQ_LOOKBACK)); q < hs.length && hs[q].i + k <= i; q++) {
@@ -473,7 +480,7 @@ function smcScan(bReal, side, ctx) {
   function evalBlocks(s, i) {
     const B = [], add = (code, text) => B.push({ code, text }), tNext = b[i].t + C.SEC;
     if (!s.fvg) add('fvg', 'ไม่มี FVG เหนือ OB');
-    else if (!s.poi) add('poi', 'Fibo 61.8–70.5% ไม่ทับกล่อง OB');
+    else if (!s.poi) add('poi', `Fibo 61.8–${C.FIB_B * 100}% ไม่ทับกล่อง OB`);
     if (s.risk > C.MAX_RISK) add('risk', `SL กว้าง $${s.risk.toFixed(1)} > $${C.MAX_RISK}`);
     if (s.rr1 < C.MIN_RR) add('rr', `R:R ถึง TP1 = ${s.rr1.toFixed(2)} < ${C.MIN_RR}`);
     if (s.bounced) add('mit', 'โซนถูกใช้แล้ว (แตะ FVG แล้วเด้ง ไม่ทำ High ใหม่)');
@@ -491,7 +498,7 @@ function smcScan(bReal, side, ctx) {
     }
     const ss = sessionBlock(tNext); if (ss) add('sess', `ช่วง${ss}`);
     const nw = newsBlock(tNext, ctx.news); if (nw) add('news', `ใกล้ข่าวแดง ${nw}`);
-    s.blocks = B; s.armed = B.length === 0;
+    s.allBlocks = B; s.blocks = B.filter(x => C.FILTERS.includes(x.code)); s.armed = s.blocks.length === 0;
   }
   function toReal(s) {
     if (sg > 0) return s;
@@ -526,6 +533,21 @@ function smcOutcome(b, fi, tr) {
   return { status: 'TIME', r: half ? P * r1 + (1 - P) * rc : rc, exitT: b[end].t + C.SEC, exit: b[end].c, half };
 }
 
+// Kelly: สัดส่วนพอร์ตที่ควรเสี่ยงต่อไม้ (ติดลบ = ระบบไม่มี edge → ไม่ควรเทรด)
+const kellyF = (W, R) => R > 0 ? W - (1 - W) / R : -1;
+// W / R จากไม้ forward test ที่ปิดแล้ว (r = กำไร ÷ ความเสี่ยงเป็นเงินของไม้นั้น)
+function kellyFT(trades, side) {
+  const r = trades.filter(t => !t.mode && t.kind === 'smc' && (!side || t.side === side) && t.pnl != null && t.R > 0
+    && !['open', 'TP1', 'NOFILL'].includes(t.status)).map(t => t.pnl / ((t.lot || 0.02) * 100 * t.R));
+  const w = r.filter(x => x > 0), l = r.filter(x => x <= 0);
+  if (!w.length || !l.length) return { n: r.length, W: null, R: null };
+  return { n: r.length, W: w.length / r.length, R: (w.reduce((a, x) => a + x, 0) / w.length) / (-l.reduce((a, x) => a + x, 0) / l.length || 1e-9) };
+}
+// lot จากเงินเสี่ยง: SL $SL_USD ต่อ 1 lot = SL_USD × 100 ดอลลาร์ · ปัดลงเป็นขั้น LOT_STEP (เลขคู่ เพื่อแบ่งปิด 50%)
+function kellyLot(bal, f) {
+  const K = CFG.KELLY, risk = Math.max(0, f) * bal, raw = risk / (CFG.SMC.SL_USD * 100);
+  return { risk, lot: Math.floor(raw / K.LOT_STEP + 1e-9) * K.LOT_STEP };
+}
 function analyze(S) {
   for (const tf of ['D1', 'H4', 'H1']) S.trend[tf] = analyzeTrend(tf, S.bars[tf]);
   const m = S.bars.M5, mc = m.map(x => x.c);
@@ -609,9 +631,9 @@ function srsiState(k, d, k1, d1) {
 const toCh = x => ({ time: x.t + CFG.TZ, open: x.o, high: x.h, low: x.l, close: x.c });
 
 // เงื่อนไขของ setup ตามลำดับในกฎ (รหัสตรงกับ evalBlocks)
-const CHECKS = [['bias', 'Bias H1 ตรงฝั่ง'], ['h4', 'H4 ไม่สวนชัด'], ['fvg', 'มี FVG เหนือ/ใต้ OB'], ['poi', 'Fibo 61.8–70.5 ทับ OB'],
+const CHECKS = [['bias', 'Bias H1 ตรงฝั่ง'], ['h4', 'H4 ไม่สวนชัด'], ['fvg', 'มี FVG เหนือ/ใต้ OB'], ['poi', 'Fibo 61.8–' + CFG.SMC.FIB_B * 100 + ' ทับ OB'],
   ['risk', 'SL ≤ $' + CFG.SMC.MAX_RISK], ['rr', 'R:R ถึง TP1 ≥ ' + CFG.SMC.MIN_RR], ['eq', 'ไม่มี EQL/EQH หน้าโซน'], ['v', 'ไม่ย่อแรงแบบ V'],
-  ['mit', 'โซนยังไม่ถูกใช้'], ['obst', 'ไม่ติดโซนใหญ่ H1/H4'], ['sess', 'นอกช่วงเวลาห้าม'], ['news', 'ไม่ใกล้ข่าวแดง']];
+  ['mit', 'โซนยังไม่ถูกใช้'], ['obst', 'ไม่ติดโซนใหญ่ H1/H4'], ['sess', 'นอกช่วงเวลาห้าม'], ['news', 'ไม่ใกล้ข่าวแดง']].filter(([c]) => CFG.SMC.FILTERS.includes(c));
 const sideTh = sd => sd === 'buy' ? 'Buy' : 'Sell';
 const stTh = { filled: '✅ ชน Limit — เข้าแล้ว', skipped: '⛔ ถึงโซนแต่ข้าม', expired: '⌛ หมดอายุ 24 ชม.', replaced: '↻ มี BOS ใหม่แทน' };
 const activeSetups = () => ['buy', 'sell'].map(sd => S.smc[sd].filter(s => s.st === 'wait').pop()).filter(Boolean);
@@ -632,7 +654,7 @@ function setupCard(s) {
       <span><b>TP1 ${s.rr1.toFixed(1)}R</b>${fmt(s.tp1)}</span><span><b>TP2 ${s.rr2.toFixed(1)}R</b>${fmt(s.tp2)}</span></div>
     <div class="checks">Entry = ${s.entryBy} · TP1 = Fibo 0% (ปิด 50% แล้วเลื่อน SL บังทุน) · TP2 = ${s.tp2By}</div>
     <div class="checks">BOS ${fmtT(s.t0)} ${s.sg > 0 ? 'ทะลุ swing high' : 'หลุด swing low'} ${fmt(s.swing)} ด้วยแท่งตัวเต็ม ·
-      Fibo ${fmt(s.L)} → ${fmt(s.H)} · 61.8% ${fmt(s.f618)} · 70.5% ${fmt(s.f705)} ·
+      Fibo ${fmt(s.L)} → ${fmt(s.H)} · 61.8% ${fmt(s.f618)} · ${CFG.SMC.FIB_B * 100}% ${fmt(s.f705)} ·
       OB ${fmt(s.obLo)}–${fmt(s.obHi)} · FVG ${s.fvg ? fmt(s.fvg.lo) + '–' + fmt(s.fvg.hi) : 'ไม่มี'}</div>
     <div class="ck">${CHECKS.map(([c, t]) => c === 'news' && !S.news ? `<span class="na">▫️ ${t} (ไม่มีปฏิทินข่าว — เช็กเอง)</span>`
       : B[c] ? `<span class="no" title="${B[c]}">❌ ${B[c]}</span>` : `<span class="ok">✅ ${t}</span>`).join('')}</div>
@@ -663,7 +685,7 @@ function render() {
   $('bias').innerHTML = `<span>Bias หลัก (H1 + H4):</span>
     <b class="${S.allow === 'buy' ? 'up' : S.allow === 'sell' ? 'down' : 'side'}">${S.allow === 'buy' ? '▲ หาเฉพาะ Buy ใน M5' : S.allow === 'sell' ? '▼ หาเฉพาะ Sell ใน M5' : '◆ ไม่เทรด — ' + why}</b>
     <span class="note">H1 ${T.H1.label} · H4 ${T.H4.label} · D ${T.D1.label}</span>
-    ${ss ? `<span class="tag against">⏰ ช่วง${ss} — ไม่ตั้ง Limit</span>` : ''}
+    ${ss && C.FILTERS.includes('sess') ? `<span class="tag against">⏰ ช่วง${ss} — ไม่ตั้ง Limit</span>` : ''}
     ${nw ? `<span class="tag against">📰 ใกล้ข่าวแดง ${nw}</span>` : S.news ? '' : '<span class="tag">📰 ไม่มีปฏิทินข่าว — เช็กข่าวแดงเอง</span>'}`;
 
   const card = (name, t) => {
@@ -681,7 +703,7 @@ function render() {
       <ul class="reasons"><li>ADX ${m.adx.toFixed(1)} · RSI ${m.rsi.toFixed(1)}</li>
       <li>EMA20 ${fmt(m.e20)} ${m.e20 > m.e50 ? '>' : '<'} EMA50 ${fmt(m.e50)}</li>
       <li>Stoch RSI K ${S.srsi.k.at(-1).toFixed(0)} / D ${S.srsi.d.at(-1).toFixed(0)} — ${srsiState(S.srsi.k.at(-1), S.srsi.d.at(-1), S.srsi.k.at(-2), S.srsi.d.at(-2))}</li>
-      <li>ATR M5 $${S.m5atr.toFixed(1)} — SL จำกัด $${C.MAX_RISK} ${S.m5atr > C.MAX_RISK - C.SL_BUF ? '(แท่ง OB มักใหญ่เกิน → setup ผ่านยาก)' : ''}</li></ul></div>`;
+      <li>ATR M5 $${S.m5atr.toFixed(1)} — SL คงที่ $${C.SL_USD}</li></ul></div>`;
 
   // ระบบ SMC
   const act = activeSetups().sort((a, b) => (b.side === S.allow) - (a.side === S.allow));
@@ -692,10 +714,10 @@ function render() {
       `<div class="checks">1) Bias: H1 ขาขึ้น → หาเฉพาะ Buy · H1 ขาลง → หาเฉพาะ Sell · H4 ต้องไม่เป็นขาตรงข้ามชัด</div>
        <div class="checks">2) M5 ปิดทะลุ swing ล่าสุดด้วยแท่งตัวเต็ม (เนื้อ ≥ ${C.DISP_BODY * 100}% · ยาว ≥ ${C.DISP_ATR}×ATR) = BOS/CHoCH →
          OB = แท่งสวนทางแท่งสุดท้ายก่อนพุ่ง · FVG เหนือ/ใต้ OB · Fibo จากไส้ต่ำสุด→สูงสุดของคลื่น · POI = Fibo ${C.FIB_A * 100}–${C.FIB_B * 100}% ทับกล่อง OB</div>
-       <div class="checks">3) Limit ที่ขอบ OB (หรือ 61.8% ถ้า FVG คลุม) · SL พ้น OB $${C.SL_BUF} · TP1 = Fibo 0% ปิด 50% + บังทุน · TP2 = Fibo −0.27 หรือ EQH/EQL ถัดไป (M5/H1) · ถือไม่เกิน 24 ชม.</div>
-       <div class="checks">ข้ามเมื่อ: EQL/EQH หน้าโซน · ย่อแรงแบบ V · โซนถูกใช้แล้ว · SL &gt; $${C.MAX_RISK} หรือ R:R ถึง TP1 &lt; ${C.MIN_RR} · ติด OB/EQ ของ H1/H4 ก่อน TP1 · ${C.SESSION_BLOCK.map(w => w[2]).join(' · ')} · ข่าวแดง USD 30 นาทีก่อน–15 นาทีหลัง</div>
-       <div class="checks" style="color:var(--side)">Backtest M5 2025-06→2026-10 (โค้ดนี้, backtest/smc_backtest.js): ครบทุกกฎ = 14 ไม้ (0.9/เดือน) win 29% PF 0.64 ·
-         โครงสร้าง OB+FVG+Fibo ล้วน 923 ไม้ PF 0.87 · ตัวที่ตัดไม้มากสุดคือ SL ≤ $${C.MAX_RISK} — ยังไม่พบ edge</div>`) +
+       <div class="checks">3) Limit ที่ขอบ OB (หรือ 61.8% ถ้า FVG คลุม) · SL คงที่ $${C.SL_USD} จาก Entry · TP1 = Fibo 0% ปิด 50% + บังทุน · TP2 = Fibo −0.27 หรือ EQH/EQL ถัดไป (M5/H1) · ถือไม่เกิน 24 ชม.</div>
+       <div class="checks">ข้ามเฉพาะ: ไม่มี FVG · Fibo ไม่ทับ OB · ไม่ตรง Bias · ข่าวแดง USD 30 นาทีก่อน–15 นาทีหลัง (ไม่ใช้ตัวกรอง EQ / V / mitigated / SL / R:R / โซนใหญ่ / ช่วงเวลา แล้ว)</div>
+       <div class="checks" style="color:var(--side)">Backtest M5 2025-06→2026-10 (backtest/article_test.js, sl_sweep.js): 415 ไม้ (~27/เดือน) · win 29% · PF 1.34 (2025H2 1.35 / 2026 1.34) · Buy 1.18 · Sell 1.54 · เข้าสุ่มแบบเดียวกัน PF 1.11 —
+         SL $3 มาจากการลองหลายแบบ → สมมติฐาน ใช้ lot ต่ำจนกว่า forward test เกิน 30 ไม้</div>`) +
     (X.ON ? xCard() : '') +
     (act.length ? act.map(setupCard).join('') : `<div class="empty">ยังไม่มี setup ที่รอราคา — รอ M5 ทำ BOS ด้วยแท่งตัวเต็ม</div>`) +
     (ended.length ? cblk('hist', '', '', '🕘 <b>setup ล่าสุดที่จบแล้ว</b> <span class="sum">(คิดจากแท่งย้อนหลังด้วย Bias ปัจจุบัน)</span>',
@@ -728,7 +750,7 @@ function render() {
   if (main) {
     pl(main.obHi, 'rgba(188,140,255,.9)', 0, 'OB'); pl(main.obLo, 'rgba(188,140,255,.9)', 0, '');
     if (main.fvg) { pl(main.fvg.hi, 'rgba(88,166,255,.8)', 2, 'FVG'); pl(main.fvg.lo, 'rgba(88,166,255,.8)', 2, ''); }
-    pl(main.f618, 'rgba(227,179,65,.7)', 3, '61.8'); pl(main.f705, 'rgba(227,179,65,.7)', 3, '70.5');
+    pl(main.f618, 'rgba(227,179,65,.7)', 3, '61.8'); pl(main.f705, 'rgba(227,179,65,.7)', 3, String(C.FIB_B * 100));
     if (!main.armed) pl(main.entry, 'rgba(227,179,65,.5)', 1, 'Limit (ไม่ตั้ง)');
     else { pl(main.entry, '#e3b341', 0, 'Limit', 2); pl(main.sl, '#ef5350', 0, 'SL', 2); pl(main.tp1, '#26a69a', 0, 'TP1', 2); pl(main.tp2, '#26a69a', 2, 'TP2', 1); }
   }
@@ -973,14 +995,37 @@ function renderLadder() {
     `<div class="checks">${L.reason} · กติกา: ไม้ล่าสุดที่ปิดได้กำไร → 0.04 · ขาดทุน → 0.02 (ต้องแบ่งปิด 50% ที่ TP1 จึงเริ่มที่ 0.02)</div>
      <div class="checks">forward test: ปิดแล้ว ${L.closed} ไม้ · กำไร ${L.wins} ไม้${L.closed ? ` (${(100 * L.wins / L.closed).toFixed(0)}%)` : ''} · รวม ${L.pnl_total >= 0 ? '+' : ''}$${L.pnl_total.toFixed(2)} · เปิดอยู่ ${L.open} ไม้</div>
      ${L.trades.length ? `<div class="checks mono" style="margin-top:4px">${L.trades.map(t => `${fmtT(t.bar_time)} ${t.side.toUpperCase()} ${(t.lot || 0.02).toFixed(2)} @ ${fmt(t.entry)} → ${tradeSt[t.status] || t.status}${t.pnl != null ? ` ${t.pnl >= 0 ? '+' : ''}$${t.pnl.toFixed(2)}` : ''}`).join('<br>')}</div>` : ''}`);
+  el.insertAdjacentHTML('beforeend', kellyBlock());
   syncSysBtn(); renderSignals(); renderHistory();
+  function kellyBlock() {   // 🎯 Kelly Criterion (อยู่ใน renderLadder เพื่อให้ mobile_build คัดลอกไปด้วย)
+    const K = CFG.KELLY, H = (L.history || L.trades || []);
+    let bal = K.BAL_DEFAULT; try { bal = +localStorage.getItem('kellyBal') || K.BAL_DEFAULT; } catch (e) { }
+    const pct = v => (100 * v).toFixed(1) + '%';
+    const rows = [['all', 'รวม'], ['buy', 'Buy'], ['sell', 'Sell']].map(([k, name]) => {
+      const ft = kellyFT(H, k === 'all' ? null : k), useFt = ft.n >= K.MIN_FT && ft.W != null, src = useFt ? ft : K.BT[k];
+      const f = kellyF(src.W, src.R);
+      const lots = K.FRACS.map(fr => { const x = kellyLot(bal, f * fr); return f <= 0 ? '—' : x.lot >= K.MIN_LOT ? `${x.lot.toFixed(2)}<br><span class="note">$${x.risk.toFixed(0)}</span>` : `<span class="down">&lt; ${K.MIN_LOT}</span><br><span class="note">$${x.risk.toFixed(0)}</span>`; });
+      return `<tr><td class="l"><b>${name}</b><br><span class="note">${useFt ? 'FT' : 'BT'} ${src.n} ไม้${useFt ? '' : ft.n ? ` (FT ${ft.n})` : ''}</span></td><td>${pct(src.W)}</td><td>${src.R.toFixed(2)}</td>
+        <td><b class="${f > 0 ? 'up' : 'down'}">${f > 0 ? pct(f) : 'ไม่มี edge'}</b></td>${lots.map(x => `<td>${x}</td>`).join('')}</tr>`;
+    }).join('');
+    const fAll = kellyF(K.BT.all.W, K.BT.all.R), half = kellyLot(bal, fAll / 2), minPct = K.MIN_LOT * CFG.SMC.SL_USD * 100 / bal;
+    return cblk('kelly', '', 'border-color:var(--gold)',
+      `🎯 <b>Kelly Criterion — ½ Kelly: <span class="mono" style="color:var(--gold);font-size:16px">${half.lot >= K.MIN_LOT ? half.lot.toFixed(2) + ' lot' : 'ทุนไม่พอ'}</span></b>
+       <span class="sum mono">f* ${pct(fAll)} · ทุน $${bal.toLocaleString()}</span>`,
+      `<div class="checks">สูตร <b class="mono">f* = W − (1 − W) / R</b> · W = win rate · R = กำไรเฉลี่ย ÷ ขาดทุนเฉลี่ย · f* = % ของพอร์ตที่เสี่ยงต่อไม้ · lot = เงินเสี่ยง ÷ (SL $${CFG.SMC.SL_USD} × 100)</div>
+       <div class="checks">ทุนในพอร์ต $ <input id="kBal" type="number" min="0" step="50" value="${bal}" style="width:110px;background:var(--bg);color:var(--fg,inherit);border:1px solid var(--line);border-radius:6px;padding:2px 6px"
+         onclick="event.stopPropagation()" onchange="try{localStorage.setItem('kellyBal',this.value)}catch(e){};renderLadder()"> (Enter / คลิกที่อื่นเพื่อคำนวณใหม่)</div>
+       <div class="ftwrap"><table class="fttab"><tr><th class="l">ชุด</th><th>W</th><th>R</th><th>f*</th>${K.FRACS.map(fr => `<th>${fr === 1 ? 'Full' : fr === 0.5 ? '½' : '¼'} Kelly</th>`).join('')}</tr>${rows}</table></div>
+       <div class="checks">BT = backtest M5 2025-06→2026-10 · ใช้ค่า forward test (FT) แทนอัตโนมัติเมื่อปิดครบ ${K.MIN_FT} ไม้ · lot ปัดลงทีละ ${K.LOT_STEP} (แบ่งปิด 50% ที่ TP1) · ต่ำสุด ${K.MIN_LOT} lot = เสี่ยง ${pct(minPct)} ของทุนนี้</div>
+       <div class="checks" style="color:var(--side)">⚠️ Full Kelly ใช้ได้เมื่อรู้ W / R จริงแน่นอน — ค่า backtest มักดีเกินจริง ถ้าประเมินเกิน lot จะเกินจุดที่พอร์ตโตเร็วสุดและ DD หนัก (Thorp ใช้แค่ส่วนหนึ่งของ Kelly) แนะนำ ½ หรือ ¼ Kelly · win ~28% แพ้ติดกัน 10 ไม้ได้บ่อย · ถ้าใช้ Kelly ให้ใช้แทนบันได B ไม่ใช่ซ้อนกัน</div>`);
+  }
 }
 // 📜 History Forward Test — ทุกไม้ในบันทึก (PC: server signals-log.jsonl · มือถือ: localStorage) · ผลตรวจด้วยกติกาเดียวกับบันได
 const ftOpen = t => t.status === 'open' || t.status === 'TP1';
 const ftDone = t => t.pnl != null && !ftOpen(t) && t.status !== 'NOFILL';
 const ftUsd = v => `${v >= 0 ? '+' : '−'}$${Math.abs(v).toFixed(2)}`;
 const ftMon = t => new Date((t + CFG.TZ) * 1000).toISOString().slice(0, 7);
-function ftSide() { try { return localStorage.getItem('ftSide') || 'all'; } catch (e) { return 'all'; } }
+function ftSide() { try { const v = localStorage.getItem('ftSide') || 'all'; return v === 'x3' && !X.ON ? 'all' : v; } catch (e) { return 'all'; } }
 function setFtSide(v) { try { localStorage.setItem('ftSide', v); } catch (e) { } renderHistory(); }
 function ftRows() {   // ใหม่ → เก่า · ทั้งหมด/Buy/Sell = ระบบหลัก · x3 = โหมดทดลอง
   const sd = ftSide(), H = (S.ladder && (S.ladder.history || S.ladder.trades)) || [];
