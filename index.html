@@ -91,7 +91,6 @@ header{position:sticky;top:0;z-index:20;padding-top:calc(10px + env(safe-area-in
 .now .lvls span{font-size:12px;padding:5px 4px}
 .now .row{display:flex;justify-content:space-between;gap:8px;font-size:13px;padding:6px 0;border-top:1px solid var(--line)}
 details.legend summary{cursor:pointer;color:var(--accent);margin:6px 0}
-#ftPanel h2.ph{flex-wrap:wrap}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
 .modal.show{display:flex}
 .modal .box{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;width:100%;max-width:440px}
@@ -106,13 +105,7 @@ details.legend summary{cursor:pointer;color:var(--accent);margin:6px 0}
   #status{margin-left:0;width:100%;text-align:left;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .bias{gap:6px 10px} .bias b{font-size:16px;width:100%}
   .cards{grid-template-columns:minmax(0,1fr)}
-  #ftHist .ftk{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
-  #ftHist .ftk div{padding:6px 8px}
-  #ftHist .ftk b{font-size:15px}
-  #ftHist>.ftwrap:last-child .fttab td.l{white-space:normal;min-width:64px}
-  #ftHist .fttab{font-size:11px} #ftHist .fttab :is(th,td){padding:4px 5px}
   .now .row>span:first-child{white-space:nowrap}
-  #ftHist>.ftwrap:last-child .fttab :is(th,td):is(:nth-child(3),:nth-child(5),:nth-child(6),:nth-child(7),:nth-child(9),:nth-child(10),:nth-child(11)){display:none}
   main{padding:10px;gap:12px}
   #chart{height:300px}
   #srsi{height:110px}
@@ -145,19 +138,11 @@ details.legend summary{cursor:pointer;color:var(--accent);margin:6px 0}
 .hz{display:flex;justify-content:space-between;gap:8px;font-size:12px;padding:4px 8px;border-left:3px solid var(--line);margin-bottom:4px;background:var(--panel2);border-radius:4px}
 .hz.sell{border-left-color:var(--down)} .hz.buy{border-left-color:var(--up)}
 .hist{font-size:12px;color:var(--muted);line-height:1.7}
-#ftPanel .ftb{display:flex;gap:6px;flex-wrap:wrap}
-#ftPanel button.on{border-color:var(--gold);color:var(--gold)}
-.ftk{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px;margin-bottom:10px}
-.ftk div{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px 10px;font-size:11px;color:var(--muted)}
-.ftk b{display:block;font-size:17px;color:var(--text);font-family:'JetBrains Mono',monospace;font-weight:600}
-.ftk b.up{color:var(--up)} .ftk b.down{color:var(--down)}
 .ftwrap{overflow-x:auto;max-height:460px;overflow-y:auto;border:1px solid var(--line);border-radius:8px}
 .fttab{border-collapse:collapse;width:100%;font-size:12px;white-space:nowrap}
 .fttab th{position:sticky;top:0;background:var(--panel2);color:var(--muted);font-weight:500;text-align:right;padding:5px 8px;border-bottom:1px solid var(--line)}
 .fttab td{padding:4px 8px;border-bottom:1px solid var(--line);text-align:right;font-family:'JetBrains Mono',monospace}
 .fttab th:first-child,.fttab td:first-child,.fttab td.l,.fttab th.l{text-align:left}
-.ftsub{font-size:12px;color:var(--muted);margin:10px 0 4px}
-#ftEq{width:100%;height:90px;display:block;background:var(--panel2);border:1px solid var(--line);border-radius:8px}
 </style>
 </head>
 <body>
@@ -193,7 +178,6 @@ details.legend summary{cursor:pointer;color:var(--accent);margin:6px 0}
       <div class="panel" id="htfPanel"><h2>🧱 โซน OB H1 / H4 <span class="note">(Bearish/Bullish OB ที่ยังไม่ถูกใช้ — แสดงเป็นกล่องบนกราฟ · H4 ขอบหนา · + EQH/EQL ที่ยังไม่ถูกกวาด)</span></h2><div id="htf"></div></div>
     </div>
   </div>
-  <div class="panel" id="ftPanel"><h2 class="ph">📜 History Forward Test <span class="ftb"><button data-ft="all" onclick="setFtSide('all')">ทั้งหมด</button><button data-ft="buy" onclick="setFtSide('buy')">Buy</button><button data-ft="sell" onclick="setFtSide('sell')">Sell</button><button onclick="ftCsv()" title="ดาวน์โหลดประวัติเป็น CSV">⬇ CSV</button></span></h2><div id="ftHist"><div class="empty">กำลังโหลด…</div></div></div>
   <p class="note" id="foot">
     แอปนี้อ่านอย่างเดียว ไม่ส่งออเดอร์ · ข้อมูลจาก Twelve Data + gold-api.com (ราคาอาจต่างจากโบรกเล็กน้อย) ·
     ระบบ: Bias จาก H1 (H4 ต้องไม่สวนชัด) → M5 ทะลุ swing ด้วยแท่งตัวเต็ม (BOS/CHoCH) → OB (แท่งสวนทางแท่งสุดท้าย) + FVG เหนือ/ใต้ OB + Fibo 61.8–78.6% ทับกล่อง OB →
@@ -205,7 +189,6 @@ details.legend summary{cursor:pointer;color:var(--accent);margin:6px 0}
   <button data-tab="home"><i>🏠</i>ภาพรวม</button>
   <button data-tab="sys"><i>📋</i>ระบบ</button>
   <button data-tab="trend"><i>📈</i>เทรนด์/โซน</button>
-  <button data-tab="hist"><i>📜</i>ประวัติ</button>
 </nav>
 
 <script>
@@ -1018,7 +1001,7 @@ function renderLadder() {
      <div class="checks">forward test: ปิดแล้ว ${L.closed} ไม้ · กำไร ${L.wins} ไม้${L.closed ? ` (${(100 * L.wins / L.closed).toFixed(0)}%)` : ''} · รวม ${L.pnl_total >= 0 ? '+' : ''}$${L.pnl_total.toFixed(2)} · เปิดอยู่ ${L.open} ไม้</div>
      ${L.trades.length ? `<div class="checks mono" style="margin-top:4px">${L.trades.map(t => `${fmtT(t.bar_time)} ${t.side.toUpperCase()} ${(t.lot || 0.02).toFixed(2)} @ ${fmt(t.entry)} → ${tradeSt[t.status] || t.status}${t.pnl != null ? ` ${t.pnl >= 0 ? '+' : ''}$${t.pnl.toFixed(2)}` : ''}`).join('<br>')}</div>` : ''}`);
   el.insertAdjacentHTML('beforeend', kellyBlock());
-  syncSysBtn(); renderSignals(); renderHistory();
+  syncSysBtn(); renderSignals();
   function kellyBlock() {   // 🎯 Kelly Criterion (อยู่ใน renderLadder เพื่อให้ mobile_build คัดลอกไปด้วย)
     const K = CFG.KELLY, H = (L.history || L.trades || []);
     let bal = K.BAL_DEFAULT; try { bal = +localStorage.getItem('kellyBal') || K.BAL_DEFAULT; } catch (e) { }
@@ -1041,53 +1024,6 @@ function renderLadder() {
        <div class="checks">BT = backtest M5 2025-06→2026-10 · ใช้ค่า forward test (FT) แทนอัตโนมัติเมื่อปิดครบ ${K.MIN_FT} ไม้ · lot ปัดลงทีละ ${K.LOT_STEP} (แบ่งปิด 50% ที่ TP1) · ต่ำสุด ${K.MIN_LOT} lot = เสี่ยง ${pct(minPct)} ของทุนนี้</div>
        <div class="checks" style="color:var(--side)">⚠️ Full Kelly ใช้ได้เมื่อรู้ W / R จริงแน่นอน — ค่า backtest มักดีเกินจริง ถ้าประเมินเกิน lot จะเกินจุดที่พอร์ตโตเร็วสุดและ DD หนัก (Thorp ใช้แค่ส่วนหนึ่งของ Kelly) แนะนำ ½ หรือ ¼ Kelly · win ~28% แพ้ติดกัน 10 ไม้ได้บ่อย · ถ้าใช้ Kelly ให้ใช้แทนบันได B ไม่ใช่ซ้อนกัน</div>`);
   }
-}
-// 📜 History Forward Test — ทุกไม้ในบันทึก (PC: server signals-log.jsonl · มือถือ: localStorage) · ผลตรวจด้วยกติกาเดียวกับบันได
-const ftOpen = t => t.status === 'open' || t.status === 'TP1';
-const ftDone = t => t.pnl != null && !ftOpen(t) && t.status !== 'NOFILL';
-const ftUsd = v => `${v >= 0 ? '+' : '−'}$${Math.abs(v).toFixed(2)}`;
-const ftMon = t => new Date((t + CFG.TZ) * 1000).toISOString().slice(0, 7);
-function ftSide() { try { const v = localStorage.getItem('ftSide') || 'all'; return v === 'x3' && !X.ON ? 'all' : v; } catch (e) { return 'all'; } }
-function setFtSide(v) { try { localStorage.setItem('ftSide', v); } catch (e) { } renderHistory(); }
-function ftRows() {   // ใหม่ → เก่า · ทั้งหมด/Buy/Sell = ระบบหลัก · x3 = โหมดทดลอง
-  const sd = ftSide(), H = (S.ladder && (S.ladder.history || S.ladder.trades)) || [];
-  return sd === 'x3' ? H.filter(t => t.mode === 'x3') : H.filter(t => !t.mode && (sd === 'all' || t.side === sd));
-}
-function renderHistory() {
-  const el = $('ftHist'); if (!el || !S.ladder) return;
-  const sd = ftSide(); document.querySelectorAll('#ftPanel [data-ft]').forEach(b => b.classList.toggle('on', b.dataset.ft === sd));
-  const R = ftRows(), C = R.filter(ftDone).sort((a, b) => a.exit_time - b.exit_time);
-  if (!R.length) { el.innerHTML = `<div class="empty">ยังไม่มีไม้${sd === 'x3' ? 'ของ ' + X.NAME : sd === 'all' ? 'ของระบบหลัก' : ' ' + sd.toUpperCase() + ' ของระบบหลัก'}ในบันทึก — forward test เริ่มนับเมื่อราคาชน Limit ไม้แรก</div>`; return; }
-  let eq = 0, peak = 0, dd = 0, run = 0, maxL = 0; const pts = [0];
-  for (const t of C) { eq += t.pnl; pts.push(eq); peak = Math.max(peak, eq); dd = Math.max(dd, peak - eq); run = t.pnl < 0 ? run + 1 : 0; maxL = Math.max(maxL, run); }
-  const W = C.filter(t => t.pnl > 0), Ls = C.filter(t => t.pnl < 0), gw = W.reduce((x, t) => x + t.pnl, 0), gl = -Ls.reduce((x, t) => x + t.pnl, 0);
-  const pf = gl > 0 ? (gw / gl).toFixed(2) : gw > 0 ? '∞' : '—', nOpen = R.filter(ftOpen).length, nNo = R.filter(t => t.status === 'NOFILL').length;
-  const k = (lab, v, cls = '') => `<div>${lab}<b class="${cls}">${v}</b></div>`;
-  let svg = '';
-  if (pts.length > 2) {
-    const lo = Math.min(0, ...pts), hi = Math.max(0, ...pts), sp = hi - lo || 1, X = i => (i / (pts.length - 1) * 600).toFixed(1), Y = v => (84 - (v - lo) / sp * 78).toFixed(1);
-    svg = `<div class="ftsub">Equity (ปิดแล้ว ${C.length} ไม้)</div><svg id="ftEq" viewBox="0 0 600 90" preserveAspectRatio="none"><line x1="0" x2="600" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--muted)" stroke-dasharray="3 3" stroke-width="1" vector-effect="non-scaling-stroke"/><polyline fill="none" stroke="${eq >= 0 ? 'var(--up)' : 'var(--down)'}" stroke-width="2" vector-effect="non-scaling-stroke" points="${pts.map((v, i) => X(i) + ',' + Y(v)).join(' ')}"/></svg>`;
-  }
-  const M = {}; for (const t of C) { const m = ftMon(t.exit_time), o = M[m] || (M[m] = { n: 0, w: 0, p: 0 }); o.n++; o.w += t.pnl > 0; o.p += t.pnl; }
-  const mon = Object.keys(M).sort().reverse().map(m => `<tr><td>${m}</td><td>${M[m].n}</td><td>${M[m].w}</td><td>${(100 * M[m].w / M[m].n).toFixed(0)}%</td><td class="${M[m].p >= 0 ? 'up' : 'down'}">${ftUsd(M[m].p)}</td></tr>`).join('');
-  const hold = t => t.exit_time ? ((t.exit_time - t.bar_time) / 3600).toFixed(1) + ' ชม.' : '';
-  const rows = R.map(t => `<tr><td>${fmtT(t.bar_time)}</td><td class="l ${t.side === 'buy' ? 'up' : 'down'}">${t.side.toUpperCase()}</td><td>${(t.lot || 0.02).toFixed(2)}</td><td>${fmt(t.entry)}</td><td>${fmt(t.sl)}</td><td>${t.tp1 != null ? fmt(t.tp1) : '—'}</td><td>${t.tp2 != null ? fmt(t.tp2) : t.tp != null ? fmt(t.tp) : '—'}</td>`
-    + `<td class="l">${tradeSt[t.status] || t.status}</td><td>${t.exit != null ? fmt(t.exit) : ''}</td><td>${t.exit_time ? fmtT(t.exit_time) : ''}</td><td>${hold(t)}</td><td class="${t.pnl > 0 ? 'up' : t.pnl < 0 ? 'down' : ''}">${t.pnl != null ? ftUsd(t.pnl) : ''}</td></tr>`).join('');
-  el.innerHTML = `<div class="ftk">${k('ไม้ที่ชน Limit', R.length)}${k('ปิดแล้ว', C.length)}${k('ชนะ / แพ้', `${W.length} / ${Ls.length}`)}${k('Win rate', C.length ? (100 * W.length / C.length).toFixed(0) + '%' : '—')}`
-    + `${k('กำไรสุทธิ', ftUsd(eq), eq >= 0 ? 'up' : 'down')}${k('PF', pf)}${k('เฉลี่ย/ไม้', C.length ? ftUsd(eq / C.length) : '—')}${k('Max DD', '$' + dd.toFixed(2))}${k('แพ้ติดกันสูงสุด', maxL)}${k('เปิดอยู่', nOpen)}</div>`
-    + `<div class="note">${sd === 'x3' ? X.NAME + ' (lot คงที่ ' + X.LOT.toFixed(2) + ')' : 'ระบบหลัก'} · เริ่มบันทึก ${fmtT(R.at(-1).bar_time)} · ชนะ = ปิดได้ $ บวก (TP1 + บังทุนนับเป็นชนะ) · ไม่นับไม้ NOFILL${nNo ? ` (${nNo} ไม้)` : ''} · คิดเงินจาก lot ตามบันไดที่แอปแจ้ง ถ้าเข้าจริงไม่ตรง ผลจะต่าง</div>`
-    + svg
-    + (mon ? `<div class="ftsub">รายเดือน (นับตามวันปิดไม้)</div><div class="ftwrap" style="max-height:200px"><table class="fttab"><tr><th>เดือน</th><th>ไม้</th><th>ชนะ</th><th>Win</th><th>กำไร</th></tr>${mon}</table></div>` : '')
-    + `<div class="ftsub">ทุกไม้ (ใหม่ → เก่า)</div><div class="ftwrap"><table class="fttab"><tr><th>เข้า</th><th class="l">ฝั่ง</th><th>Lot</th><th>Entry</th><th>SL</th><th>TP1</th><th>TP2</th><th class="l">ผล</th><th>ออก</th><th>เวลาออก</th><th>ถือ</th><th>$</th></tr>${rows}</table></div>`;
-}
-function ftCsv() {
-  const R = ftRows(); if (!R.length) return;
-  const iso = t => t ? new Date((t + CFG.TZ) * 1000).toISOString().slice(0, 16).replace('T', ' ') : '';
-  const cols = ['key', 'mode', 'side', 'entry_th', 'lot', 'level', 'entry', 'sl', 'tp1', 'tp2', 'R', 'status', 'exit', 'exit_th', 'pnl', 'why'];
-  const q = v => { v = v == null ? '' : String(v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
-  const lines = [cols.join(',')].concat(R.slice().reverse().map(t => cols.map(c => q(c === 'entry_th' ? iso(t.bar_time) : c === 'exit_th' ? iso(t.exit_time) : c === 'tp2' && t.tp2 == null ? t.tp : t[c])).join(',')));
-  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['\ufeff' + lines.join('\n')], { type: 'text/csv;charset=utf-8' }));
-  a.download = 'xau-smc-forward-test.csv'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
 }
 function beep() { try { const a = new AudioContext(), o = a.createOscillator(), g = a.createGain(); o.connect(g); g.connect(a.destination); o.frequency.value = 880; g.gain.value = .1; o.start(); o.stop(a.currentTime + .25); } catch (e) { } }
 
@@ -1133,7 +1069,7 @@ $('keySave').onclick = async () => {
 };
 $('ladderReset').onclick = () => { if (!confirm('ล้างประวัติบันไดและ forward test ทั้งหมด?')) return; S.trades = []; LS.set('trades', []); if (S.bars) recalc(); };
 // แท็บล่าง
-const TABS = { home: ['now', 'bias', 'chartBox'], sys: ['sysPanel'], trend: ['cards', 'htfPanel'], hist: ['ftPanel', 'foot'] };
+const TABS = { home: ['now', 'bias', 'chartBox'], sys: ['sysPanel'], trend: ['cards', 'htfPanel', 'foot'] };
 function setTab(t, keep) {
   if (!TABS[t]) t = 'home';
   for (const k in TABS) TABS[k].forEach(id => $(id) && $(id).classList.toggle('tabhide', k !== t));
