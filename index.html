@@ -44,6 +44,14 @@ main{padding:16px;display:grid;gap:16px;max-width:1500px;margin:0 auto}
 .grid2{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:16px}
 @media (max-width:1000px){.grid2{grid-template-columns:1fr}}
 #chart{height:430px;border-radius:10px 10px 0 0;overflow:hidden;border:1px solid var(--line)}
+#chartWrap{position:relative}
+#obLayer{position:absolute;inset:1px;pointer-events:none;overflow:hidden;z-index:3}
+.obx{position:absolute;border:1px solid;border-right:none;box-sizing:border-box;font:10px 'JetBrains Mono',monospace;padding:1px 4px;white-space:nowrap;overflow:hidden}
+.obx.buy{background:rgba(38,166,154,.10);border-color:rgba(38,166,154,.55);color:#56d364}
+.obx.sell{background:rgba(239,83,80,.10);border-color:rgba(239,83,80,.55);color:#ff7b72}
+.obx.H4{border-width:2px}
+.obx.H4.buy{background:rgba(38,166,154,.18)}
+.obx.H4.sell{background:rgba(239,83,80,.18)}
 #srsi{height:140px;border-radius:0 0 10px 10px;overflow:hidden;border:1px solid var(--line);border-top:none}
 .srsi-lbl{font-size:11px;color:var(--muted);margin:4px 2px 0}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
@@ -175,14 +183,14 @@ details.legend summary{cursor:pointer;color:var(--accent);margin:6px 0}
   <div class="cards" id="cards"></div>
   <div class="grid2">
     <div id="chartBox">
-      <div id="chart"></div>
+      <div id="chartWrap"><div id="chart"></div><div id="obLayer"></div></div>
       <div id="srsi"></div>
       <div class="srsi-lbl mono" id="srsiLbl"></div>
-      <details class="note legend"><summary>คำอธิบายเส้นบนกราฟ</summary>กราฟ M5 (เวลาไทย) · ม่วง = กล่อง OB · ฟ้า = FVG · ทองประ = Fibo 61.8/78.6 · ทองทึบ = จุดตั้ง Limit · แดง = SL · เขียว = TP1/TP2 · เส้นประหนา = โซนใหญ่ H1/H4 ที่ใกล้สุด · ● BOS = จุดทำลายโครงสร้าง · ลูกศร = ไม้ที่เข้าจริง</details>
+      <details class="note legend"><summary>คำอธิบายเส้นบนกราฟ</summary>กราฟ M5 (เวลาไทย) · ม่วง = กล่อง OB · ฟ้า = FVG · ทองประ = Fibo 61.8/78.6 · ทองทึบ = จุดตั้ง Limit · แดง = SL · เขียว = TP1/TP2 · กล่องเขียว/แดง = OB H1 (บาง) / H4 (หนา) ที่ยังไม่ถูกใช้ · เส้นประหนา = EQH/EQL H1/H4 ที่ใกล้สุด · ● BOS = จุดทำลายโครงสร้าง · ลูกศร = ไม้ที่เข้าจริง</details>
     </div>
     <div style="display:grid;gap:16px;align-content:start">
       <div class="panel" style="border-color:var(--gold)" id="sysPanel"><h2 class="ph">📋 ระบบ SMC M5 <button id="btnSys" aria-expanded="true" title="ย่อ/ขยายรายละเอียดทุกส่วน">▾ ย่อทั้งหมด</button></h2><div id="ladder"></div><div id="system"></div><div id="sysSigs"></div></div>
-      <div class="panel" id="htfPanel"><h2>🧱 โซนใหญ่ H1 / H4 <span class="note">(Bearish/Bullish OB ที่ยังไม่ถูกใช้ + EQH/EQL ที่ยังไม่ถูกกวาด)</span></h2><div id="htf"></div></div>
+      <div class="panel" id="htfPanel"><h2>🧱 โซน OB H1 / H4 <span class="note">(Bearish/Bullish OB ที่ยังไม่ถูกใช้ — แสดงเป็นกล่องบนกราฟ · H4 ขอบหนา · + EQH/EQL ที่ยังไม่ถูกกวาด)</span></h2><div id="htf"></div></div>
     </div>
   </div>
   <div class="panel" id="ftPanel"><h2 class="ph">📜 History Forward Test <span class="ftb"><button data-ft="all" onclick="setFtSide('all')">ทั้งหมด</button><button data-ft="buy" onclick="setFtSide('buy')">Buy</button><button data-ft="sell" onclick="setFtSide('sell')">Sell</button><button onclick="ftCsv()" title="ดาวน์โหลดประวัติเป็น CSV">⬇ CSV</button></span></h2><div id="ftHist"><div class="empty">กำลังโหลด…</div></div></div>
@@ -211,9 +219,9 @@ const CFG = {
   ADX_SIDEWAY: 18,           // ADX ต่ำกว่านี้ = ไม่มีเทรนด์
   WEIGHT: { D1: 3, H4: 2, H1: 1 },
   STOCHRSI: { K: 3, D: 3, RSI: 14, STOCH: 14, OB: 80, OS: 20 },
-  // ระบบ SMC M5 (2026-11-18 เริ่มที่ M5 · 2026-11-19 เปลี่ยนเป็น M5)
+  // ระบบ SMC M5 (2026-11-18 เริ่มที่ M15 · 2026-11-19 เปลี่ยนเป็น M5 · 2026-11-25 ลอง M15 แล้วกลับเป็น M5 วันเดียวกัน)
   SMC: {
-    TF: 'M5', SEC: 300,      // TF จังหวะเข้า (เปลี่ยนจาก M5 เมื่อ 2026-11-19)
+    TF: 'M5', SEC: 300,      // TF จังหวะเข้า (M15 → M5 2026-11-19 · M15 BT PF 0.95 จึงคง M5 2026-11-25)
     PIVOT: 3,                // swing M5 = fractal 3 แท่งซ้าย/ขวา (ยืนยันเมื่อแท่งขวาปิดครบ)
     DISP_BODY: 0.6,          // แท่ง Displacement: เนื้อเทียน ≥ 60% ของแท่ง
     DISP_ATR: 1.0,           //   และความยาวแท่ง ≥ 1×ATR(M5)
@@ -227,7 +235,7 @@ const CFG = {
     PARTIAL: 0.5,            // ปิดที่ TP1 50% แล้วเลื่อน SL บังทุน
     EXPIRE_BARS: 288,        // setup ที่ราคาไม่มาถึงใน 24 ชม. (288 แท่ง M5) → ยกเลิก
     MAX_HOLD_BARS: 288,      // ถือไม่เกิน 24 ชม. หลังเข้า
-    EQ_LOOKBACK: 1200,       // หา EQH/EQL ถัดไปย้อนหลัง 1,200 แท่ง M5 (100 ชม. เท่าเดิม)
+    EQ_LOOKBACK: 1200,       // หา EQH/EQL ถัดไปย้อนหลัง 1,200 แท่ง M5 (100 ชม.)
     BOUNCE_ATR: 1.0,         // Mitigated: แตะ FVG แล้วเด้งขึ้น ≥ 1×ATR(M5) (ไม่ทำ High ใหม่) แล้วกลับมา
     VSHAPE_N: 3, VSHAPE_MIN: 2,   // ย่อแรงแบบ V: แท่งตัวเต็มสวนทาง ≥ 2 ใน 3 แท่งล่าสุด
     EQ_TOL_ATR: 0.25,        // EQH/EQL M5: swing 2 จุดห่างกันไม่เกิน 0.25×ATR(M5)
@@ -241,7 +249,7 @@ const CFG = {
   // 🧪 โหมดทดลอง (2026-11-19, backtest/summary-m5-entry-sltp-2026-11-19.md): Sell ที่โครงสร้าง (FVG + Fibo ทับ OB) และ Bias ผ่าน
   // ไม่ใช้ตัวกรองอื่น · Limit จุดเดียวกับระบบหลัก · SL คงที่ $3 · TP1 Fibo 0 ปิด 50% + บังทุน · TP2 เดิม · lot คงที่ (ไม่ใช้บันได)
   // Kelly Criterion f* = W − (1 − W) / R (2026-11-24) · W = win rate · R = กำไรเฉลี่ย ÷ ขาดทุนเฉลี่ย (หน่วย R)
-  // ค่า backtest จากโค้ดแอป M5 2025-06→2026-10 (backtest/smc_backtest.js m5-sl3) · ใช้ค่า forward test แทนเมื่อปิดครบ MIN_FT ไม้
+  // ค่า backtest จากโค้ดแอป M5 2025-06→2026-10 (backtest/smc_backtest.js m5-sl3) · M15 2022–26 ได้ PF 0.95 (m15-sl3) · ใช้ค่า forward test แทนเมื่อปิดครบ MIN_FT ไม้
   KELLY: { BT: { all: { n: 452, W: 0.279, R: 3.44 }, buy: { n: 257, W: 0.288, R: 2.93 }, sell: { n: 195, W: 0.267, R: 4.16 } },
            MIN_FT: 30, FRACS: [0.25, 0.5, 1], LOT_STEP: 0.02, MIN_LOT: 0.02, BAL_DEFAULT: 1000 },
   EXP: { ON: false, SIDE: 'sell', SL_USD: 3, LOT: 0.02, NEED: ['fvg', 'poi', 'bias', 'h4'], TAG: 'x3', NAME: '🧪 ทดลอง Sell SL $3' },
@@ -378,7 +386,7 @@ function demandZones(b, per, tf) {
       if (dispUp(x, A[i - 1])) {
         let L = cand.i; for (let j = cand.i; j <= i; j++) if (b[j].l < b[L].l) L = j;
         let ob = L; for (let j = i - 1; j >= L; j--) if (b[j].c < b[j].o) { ob = j; break; }
-        const z = { kind: 'OB', tf, lo: b[ob].l, hi: b[ob].h, tAv: b[i].t + per, tMit: null };
+        const z = { kind: 'OB', tf, lo: b[ob].l, hi: b[ob].h, tOb: b[ob].t, tAv: b[i].t + per, tMit: null };
         for (let m = i + 1; m < b.length; m++) if (b[m].l <= z.hi) { z.tMit = b[m].t; break; }     // ราคากลับมาแตะ = ถูกใช้
         out.push(z);
       }
@@ -480,7 +488,7 @@ function smcScan(bReal, side, ctx) {
   function evalBlocks(s, i) {
     const B = [], add = (code, text) => B.push({ code, text }), tNext = b[i].t + C.SEC;
     if (!s.fvg) add('fvg', 'ไม่มี FVG เหนือ OB');
-    else if (!s.poi) add('poi', `Fibo 61.8–${C.FIB_B * 100}% ไม่ทับกล่อง OB`);
+    else if (!s.poi) add('poi', `Fibo 61.8–${+(C.FIB_B * 100).toFixed(1)}% ไม่ทับกล่อง OB`);
     if (s.risk > C.MAX_RISK) add('risk', `SL กว้าง $${s.risk.toFixed(1)} > $${C.MAX_RISK}`);
     if (s.rr1 < C.MIN_RR) add('rr', `R:R ถึง TP1 = ${s.rr1.toFixed(2)} < ${C.MIN_RR}`);
     if (s.bounced) add('mit', 'โซนถูกใช้แล้ว (แตะ FVG แล้วเด้ง ไม่ทำ High ใหม่)');
@@ -620,7 +628,9 @@ function initChart() {
   S.srsiK = S.chart2.addLineSeries({ color: '#58a6ff', lineWidth: 2, priceLineVisible: false, autoscaleInfoProvider: fixed });
   S.srsiD = S.chart2.addLineSeries({ color: '#f0883e', lineWidth: 1, priceLineVisible: false, autoscaleInfoProvider: fixed });
   [CFG.STOCHRSI.OB, CFG.STOCHRSI.OS].forEach(v => S.srsiK.createPriceLine({ price: v, color: 'rgba(139,148,158,.6)', lineWidth: 1, lineStyle: 2, axisLabelVisible: true, title: '' }));
-  chart.timeScale().subscribeVisibleLogicalRangeChange(r => { if (r) S.chart2.timeScale().setVisibleLogicalRange(r); });
+  chart.timeScale().subscribeVisibleLogicalRangeChange(r => { if (r) S.chart2.timeScale().setVisibleLogicalRange(r); requestAnimationFrame(drawObBoxes); });
+  chart.subscribeCrosshairMove(() => requestAnimationFrame(drawObBoxes));
+  window.addEventListener('resize', () => requestAnimationFrame(drawObBoxes));
 }
 function srsiState(k, d, k1, d1) {
   const P = CFG.STOCHRSI, up = k > d && k1 <= d1, dn = k < d && k1 >= d1;
@@ -629,9 +639,20 @@ function srsiState(k, d, k1, d1) {
   return up ? 'K ตัด D ขึ้น' : dn ? 'K ตัด D ลง' : k > d ? 'K เหนือ D' : 'K ใต้ D';
 }
 const toCh = x => ({ time: x.t + CFG.TZ, open: x.o, high: x.h, low: x.l, close: x.c });
+// กล่อง OB ของ H1/H4 บนกราฟ: เริ่มที่แท่ง OB (ถ้าเก่ากว่ากราฟ → เริ่มขอบซ้าย) ลากยาวถึงขวาสุด (ยังไม่ถูกใช้)
+function drawObBoxes() {
+  const L = $('obLayer'); if (!L || !series || !S.bars) return;
+  const ts = chart.timeScale(), w = ts.width(), t0 = S.bars.M5[Math.max(0, S.bars.M5.length - 400)].t;
+  L.innerHTML = (S.obBoxes || []).map(z => {
+    const y1 = series.priceToCoordinate(z.hi), y2 = series.priceToCoordinate(z.lo); if (y1 == null || y2 == null) return '';
+    let x = z.tOb < t0 ? 0 : ts.timeToCoordinate(z.tOb + CFG.TZ); if (x == null) x = 0; x = Math.max(0, x); if (x >= w) return '';
+    const top = Math.min(y1, y2), h = Math.max(2, Math.abs(y2 - y1));
+    return `<div class="obx ${z.tf} ${z.side}" style="left:${x}px;top:${top}px;width:${w - x}px;height:${h}px">${h >= 11 ? `${z.tf} ${z.side === 'buy' ? 'Bullish' : 'Bearish'} OB ${fmt(z.lo)}–${fmt(z.hi)}` : ''}</div>`;
+  }).join('');
+}
 
 // เงื่อนไขของ setup ตามลำดับในกฎ (รหัสตรงกับ evalBlocks)
-const CHECKS = [['bias', 'Bias H1 ตรงฝั่ง'], ['h4', 'H4 ไม่สวนชัด'], ['fvg', 'มี FVG เหนือ/ใต้ OB'], ['poi', 'Fibo 61.8–' + CFG.SMC.FIB_B * 100 + ' ทับ OB'],
+const CHECKS = [['bias', 'Bias H1 ตรงฝั่ง'], ['h4', 'H4 ไม่สวนชัด'], ['fvg', 'มี FVG เหนือ/ใต้ OB'], ['poi', 'Fibo 61.8–' + +(CFG.SMC.FIB_B * 100).toFixed(1) + ' ทับ OB'],
   ['risk', 'SL ≤ $' + CFG.SMC.MAX_RISK], ['rr', 'R:R ถึง TP1 ≥ ' + CFG.SMC.MIN_RR], ['eq', 'ไม่มี EQL/EQH หน้าโซน'], ['v', 'ไม่ย่อแรงแบบ V'],
   ['mit', 'โซนยังไม่ถูกใช้'], ['obst', 'ไม่ติดโซนใหญ่ H1/H4'], ['sess', 'นอกช่วงเวลาห้าม'], ['news', 'ไม่ใกล้ข่าวแดง']].filter(([c]) => CFG.SMC.FILTERS.includes(c));
 const sideTh = sd => sd === 'buy' ? 'Buy' : 'Sell';
@@ -654,7 +675,7 @@ function setupCard(s) {
       <span><b>TP1 ${s.rr1.toFixed(1)}R</b>${fmt(s.tp1)}</span><span><b>TP2 ${s.rr2.toFixed(1)}R</b>${fmt(s.tp2)}</span></div>
     <div class="checks">Entry = ${s.entryBy} · TP1 = Fibo 0% (ปิด 50% แล้วเลื่อน SL บังทุน) · TP2 = ${s.tp2By}</div>
     <div class="checks">BOS ${fmtT(s.t0)} ${s.sg > 0 ? 'ทะลุ swing high' : 'หลุด swing low'} ${fmt(s.swing)} ด้วยแท่งตัวเต็ม ·
-      Fibo ${fmt(s.L)} → ${fmt(s.H)} · 61.8% ${fmt(s.f618)} · ${CFG.SMC.FIB_B * 100}% ${fmt(s.f705)} ·
+      Fibo ${fmt(s.L)} → ${fmt(s.H)} · 61.8% ${fmt(s.f618)} · ${+(CFG.SMC.FIB_B * 100).toFixed(1)}% ${fmt(s.f705)} ·
       OB ${fmt(s.obLo)}–${fmt(s.obHi)} · FVG ${s.fvg ? fmt(s.fvg.lo) + '–' + fmt(s.fvg.hi) : 'ไม่มี'}</div>
     <div class="ck">${CHECKS.map(([c, t]) => c === 'news' && !S.news ? `<span class="na">▫️ ${t} (ไม่มีปฏิทินข่าว — เช็กเอง)</span>`
       : B[c] ? `<span class="no" title="${B[c]}">❌ ${B[c]}</span>` : `<span class="ok">✅ ${t}</span>`).join('')}</div>
@@ -696,10 +717,10 @@ function render() {
       <ul class="reasons">${t.reasons.map(r => `<li>${r}</li>`).join('')}</ul></div>`;
   };
   const m = S.m5;
-  const m5state = m.adx < CFG.ADX_SIDEWAY ? ['Sideway / บีบตัว', 'side'] : m.e20 > m.e50 ? ['วิ่งขึ้น', 'up'] : ['วิ่งลง', 'down'];
+  const mstate = m.adx < CFG.ADX_SIDEWAY ? ['Sideway / บีบตัว', 'side'] : m.e20 > m.e50 ? ['วิ่งขึ้น', 'up'] : ['วิ่งลง', 'down'];
   $('cards').innerHTML = card('H1 (Bias หลัก)', T.H1) + card('H4 (ห้ามสวนชัด)', T.H4) + card('Daily (D1)', T.D1) +
     `<div class="card"><h3><span>M5 (จังหวะเข้า)</span><span class="mono">ATR ${S.m5atr.toFixed(1)}</span></h3>
-      <div class="label ${m5state[1]}">${m5state[0]}</div>
+      <div class="label ${mstate[1]}">${mstate[0]}</div>
       <ul class="reasons"><li>ADX ${m.adx.toFixed(1)} · RSI ${m.rsi.toFixed(1)}</li>
       <li>EMA20 ${fmt(m.e20)} ${m.e20 > m.e50 ? '>' : '<'} EMA50 ${fmt(m.e50)}</li>
       <li>Stoch RSI K ${S.srsi.k.at(-1).toFixed(0)} / D ${S.srsi.d.at(-1).toFixed(0)} — ${srsiState(S.srsi.k.at(-1), S.srsi.d.at(-1), S.srsi.k.at(-2), S.srsi.d.at(-2))}</li>
@@ -713,11 +734,11 @@ function render() {
     cblk('rules', '', '', '📖 <b>กฎระบบ SMC M5</b>',
       `<div class="checks">1) Bias: H1 ขาขึ้น → หาเฉพาะ Buy · H1 ขาลง → หาเฉพาะ Sell · H4 ต้องไม่เป็นขาตรงข้ามชัด</div>
        <div class="checks">2) M5 ปิดทะลุ swing ล่าสุดด้วยแท่งตัวเต็ม (เนื้อ ≥ ${C.DISP_BODY * 100}% · ยาว ≥ ${C.DISP_ATR}×ATR) = BOS/CHoCH →
-         OB = แท่งสวนทางแท่งสุดท้ายก่อนพุ่ง · FVG เหนือ/ใต้ OB · Fibo จากไส้ต่ำสุด→สูงสุดของคลื่น · POI = Fibo ${C.FIB_A * 100}–${C.FIB_B * 100}% ทับกล่อง OB</div>
+         OB = แท่งสวนทางแท่งสุดท้ายก่อนพุ่ง · FVG เหนือ/ใต้ OB · Fibo จากไส้ต่ำสุด→สูงสุดของคลื่น · POI = Fibo ${C.FIB_A * 100}–${+(C.FIB_B * 100).toFixed(1)}% ทับกล่อง OB</div>
        <div class="checks">3) Limit ที่ขอบ OB (หรือ 61.8% ถ้า FVG คลุม) · SL คงที่ $${C.SL_USD} จาก Entry · TP1 = Fibo 0% ปิด 50% + บังทุน · TP2 = Fibo −0.27 หรือ EQH/EQL ถัดไป (M5/H1) · ถือไม่เกิน 24 ชม.</div>
        <div class="checks">ข้ามเฉพาะ: ไม่มี FVG · Fibo ไม่ทับ OB · ไม่ตรง Bias · ข่าวแดง USD 30 นาทีก่อน–15 นาทีหลัง (ไม่ใช้ตัวกรอง EQ / V / mitigated / SL / R:R / โซนใหญ่ / ช่วงเวลา แล้ว)</div>
-       <div class="checks" style="color:var(--side)">Backtest M5 2025-06→2026-10 (backtest/article_test.js, sl_sweep.js): 415 ไม้ (~27/เดือน) · win 29% · PF 1.34 (2025H2 1.35 / 2026 1.34) · Buy 1.18 · Sell 1.54 · เข้าสุ่มแบบเดียวกัน PF 1.11 —
-         SL $3 มาจากการลองหลายแบบ → สมมติฐาน ใช้ lot ต่ำจนกว่า forward test เกิน 30 ไม้</div>`) +
+       <div class="checks" style="color:var(--side)">Backtest M5 2025-06→2026-10 (backtest/smc_backtest.js m5-sl3): 452 ไม้ (~30/เดือน) · win 28% · PF 1.32 · Buy 1.19 · Sell 1.48 · เข้าสุ่มแบบเดียวกัน PF ~1.11 —
+         SL $3 มาจากการลองหลายแบบ → สมมติฐาน ใช้ lot ต่ำจนกว่า forward test เกิน 30 ไม้ · กฎเดียวกันบน M15 2022–26 PF 0.95</div>`) +
     (X.ON ? xCard() : '') +
     (act.length ? act.map(setupCard).join('') : `<div class="empty">ยังไม่มี setup ที่รอราคา — รอ M5 ทำ BOS ด้วยแท่งตัวเต็ม</div>`) +
     (ended.length ? cblk('hist', '', '', '🕘 <b>setup ล่าสุดที่จบแล้ว</b> <span class="sum">(คิดจากแท่งย้อนหลังด้วย Bias ปัจจุบัน)</span>',
@@ -734,13 +755,13 @@ function render() {
     (dn.map(hz).join('') || '<div class="empty">ไม่มีโซนใต้ราคาในระยะ</div>');
 
   // chart
-  const m5 = S.bars.M5.slice(-400);
-  series.setData(m5.map(toCh));
-  const mc = S.bars.M5.map(x => x.c), e20 = ema(mc, 20), e50 = ema(mc, 50), off = S.bars.M5.length - m5.length;
-  S.ema20s.setData(m5.map((x, i) => ({ time: x.t + CFG.TZ, value: e20[i + off] })));
-  S.ema50s.setData(m5.map((x, i) => ({ time: x.t + CFG.TZ, value: e50[i + off] })));
+  const mb = S.bars.M5.slice(-400);
+  series.setData(mb.map(toCh));
+  const mc = S.bars.M5.map(x => x.c), e20 = ema(mc, 20), e50 = ema(mc, 50), off = S.bars.M5.length - mb.length;
+  S.ema20s.setData(mb.map((x, i) => ({ time: x.t + CFG.TZ, value: e20[i + off] })));
+  S.ema50s.setData(mb.map((x, i) => ({ time: x.t + CFG.TZ, value: e50[i + off] })));
   const sr = S.srsi, pt = (x, v) => v == null ? { time: x.t + CFG.TZ } : { time: x.t + CFG.TZ, value: v };
-  S.srsiK.setData(m5.map((x, i) => pt(x, sr.k[i + off]))); S.srsiD.setData(m5.map((x, i) => pt(x, sr.d[i + off])));
+  S.srsiK.setData(mb.map((x, i) => pt(x, sr.k[i + off]))); S.srsiD.setData(mb.map((x, i) => pt(x, sr.d[i + off])));
   const r = chart.timeScale().getVisibleLogicalRange(); if (r) S.chart2.timeScale().setVisibleLogicalRange(r);
   const P = CFG.STOCHRSI, ln = S.bars.M5.length - 1, k0 = sr.k[ln], d0 = sr.d[ln], k1 = sr.k[ln - 1], d1 = sr.d[ln - 1];
   $('srsiLbl').innerHTML = `Stoch RSI (${P.K},${P.D},${P.RSI},${P.STOCH}) · <span style="color:#58a6ff">K ${k0.toFixed(1)}</span> · <span style="color:#f0883e">D ${d0.toFixed(1)}</span> · ${srsiState(k0, d0, k1, d1)} · ใช้ดูประกอบ`;
@@ -750,21 +771,22 @@ function render() {
   if (main) {
     pl(main.obHi, 'rgba(188,140,255,.9)', 0, 'OB'); pl(main.obLo, 'rgba(188,140,255,.9)', 0, '');
     if (main.fvg) { pl(main.fvg.hi, 'rgba(88,166,255,.8)', 2, 'FVG'); pl(main.fvg.lo, 'rgba(88,166,255,.8)', 2, ''); }
-    pl(main.f618, 'rgba(227,179,65,.7)', 3, '61.8'); pl(main.f705, 'rgba(227,179,65,.7)', 3, String(C.FIB_B * 100));
+    pl(main.f618, 'rgba(227,179,65,.7)', 3, '61.8'); pl(main.f705, 'rgba(227,179,65,.7)', 3, String(+(C.FIB_B * 100).toFixed(1)));
     if (!main.armed) pl(main.entry, 'rgba(227,179,65,.5)', 1, 'Limit (ไม่ตั้ง)');
     else { pl(main.entry, '#e3b341', 0, 'Limit', 2); pl(main.sl, '#ef5350', 0, 'SL', 2); pl(main.tp1, '#26a69a', 0, 'TP1', 2); pl(main.tp2, '#26a69a', 2, 'TP2', 1); }
   }
   const xs = activeSetups().find(x => x.side === X.SIDE);
   if (xs && xArmed(xs)) { if (xs !== main || !main.armed) pl(xs.entry, '#e3b341', 2, '🧪 Limit', 2); pl(xSL(xs), '#ff7b72', 2, '🧪 SL $' + X.SL_USD, 1); }
   ['sell', 'buy'].forEach(sd => {
-    const z = live.filter(x => x.side === sd && (sd === 'sell' ? x.lo > S.price : x.hi < S.price)).sort((a, b) => sd === 'sell' ? a.lo - b.lo : b.hi - a.hi)[0]; if (!z) return;
+    const z = live.filter(x => x.kind === 'EQ' && x.side === sd && (sd === 'sell' ? x.lo > S.price : x.hi < S.price)).sort((a, b) => sd === 'sell' ? a.lo - b.lo : b.hi - a.hi)[0]; if (!z) return;
     const color = sd === 'sell' ? 'rgba(255,123,114,.85)' : 'rgba(86,211,100,.85)';
     pl(z.hi, color, 3, sd === 'sell' ? `${z.tf} ${z.kind === 'OB' ? 'OB' : 'EQH'}` : '', 2); pl(z.lo, color, 3, sd === 'buy' ? `${z.tf} ${z.kind === 'OB' ? 'OB' : 'EQL'}` : '', 2);
   });
-  const t0 = m5[0].t;
+  const t0 = mb[0].t;
   S.bosMarkers = ['buy', 'sell'].flatMap(sd => S.smc[sd]).filter(s => s.t0 >= t0).map(s => ({ time: s.t0 + CFG.TZ, position: s.sg > 0 ? 'belowBar' : 'aboveBar',
     color: s.sg > 0 ? 'rgba(38,166,154,.7)' : 'rgba(239,83,80,.7)', shape: 'circle', text: 'BOS' }));
-  renderSignals();
+  S.obBoxes = live.filter(z => z.kind === 'OB');
+  renderSignals(); drawObBoxes();
 }
 
 // ไม้ที่ "เข้าจริง" เท่านั้น (จากบันทึก: server signals-log / localStorage บนมือถือ) — ไม่คำนวณย้อนหลัง จึงไม่ repaint
@@ -1117,6 +1139,7 @@ function setTab(t, keep) {
   for (const k in TABS) TABS[k].forEach(id => $(id) && $(id).classList.toggle('tabhide', k !== t));
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   LS.set('tab', t); if (!keep) window.scrollTo(0, 0);
+  if (t === 'home') setTimeout(drawObBoxes, 50);   // กล่อง OB H1/H4 คำนวณตำแหน่งใหม่เมื่อกราฟกลับมาแสดง
 }
 document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => setTab(b.dataset.tab));
 setTab(LS.get('tab', 'home'), true);
