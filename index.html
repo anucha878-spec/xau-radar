@@ -198,7 +198,7 @@ details.legend summary{cursor:pointer;color:var(--accent);margin:6px 0}
     แอปนี้อ่านอย่างเดียว ไม่ส่งออเดอร์ · ข้อมูลจาก Twelve Data + gold-api.com (ราคาอาจต่างจากโบรกเล็กน้อย) ·
     ระบบ: Bias จาก H1 (H4 ต้องไม่สวนชัด) → M5 ทะลุ swing ด้วยแท่งตัวเต็ม (BOS/CHoCH) → OB (แท่งสวนทางแท่งสุดท้าย) + FVG เหนือ/ใต้ OB + Fibo 61.8–78.6% ทับกล่อง OB →
     ตั้ง Limit · SL คงที่ $3 · TP1 = Fibo 0% (ปิด 50% + บังทุน) · TP2 = Fibo −0.27 หรือ EQH/EQL ถัดไป ·
-    ข้ามเฉพาะ: ไม่มี FVG · Fibo ไม่ทับ OB · ไม่ตรง Bias · ข่าวแดง 30 นาทีก่อน–15 นาทีหลัง
+    ข้ามเฉพาะ: ไม่มี FVG · Fibo ไม่ทับ OB · ไม่ตรง Bias · ข่าวแดง 30 นาทีก่อน–15 นาทีหลัง · เวลา 00:00–02:00 และ 04:00–06:00 (ไทย)
   </p>
 </main>
 <nav id="tabs">
@@ -229,7 +229,7 @@ const CFG = {
     SL_USD: 3,               // SL คงที่ Entry ± $3 (2026-11-24, backtest/summary-article-2026-11-24.md · เดิม OB ± $2)
     SL_BUF: 2.0,             // (ไม่ใช้แล้ว) SL พ้นกล่อง OB $2.0
     // เงื่อนไขที่ใช้ตัดสินตั้ง Limit (2026-11-24) · ตัวอื่นยังคำนวณไว้ (allBlocks) แต่ไม่ใช้: risk rr eq v mit obst sess
-    FILTERS: ['bias', 'h4', 'fvg', 'poi', 'news'],
+    FILTERS: ['bias', 'h4', 'fvg', 'poi', 'news', 'sess'],   // + sess (งด 00–02 / 04–06) 2026-11-25
     MAX_RISK: 5,             // ระยะ Entry→SL เกิน $5 → ข้าม
     MIN_RR: 1.5,             // R:R ถึง TP1 ต่ำกว่า 1.5 → ข้าม
     PARTIAL: 0.5,            // ปิดที่ TP1 50% แล้วเลื่อน SL บังทุน
@@ -243,14 +243,14 @@ const CFG = {
     HTF_EQ_TOL_ATR: 0.15,    // EQH/EQL H1/H4: ห่างกันไม่เกิน 0.15×ATR ของ TF นั้น
     HTF_MAX_AGE: { H1: 500 * 3600, H4: 400 * 14400 },   // ใช้โซนใหญ่ที่เกิดไม่เกิน 500 แท่ง H1 / 400 แท่ง H4
     OBST_PAD_R: 0.5,         // โซนใหญ่ฝั่งตรงข้ามอยู่ระหว่าง Entry ถึง TP1 + 0.5R → ข้าม
-    SESSION_BLOCK: [[6 * 60, 12 * 60, 'ตลาดเอเชีย 06:00–12:00'], [19 * 60 + 15, 20 * 60 + 30, 'เปิดตลาดอเมริกา/ข่าว 19:15–20:30']],   // เวลาไทย
+    SESSION_BLOCK: [[0, 2 * 60, 'ท้ายตลาดนิวยอร์ก 00:00–02:00'], [4 * 60, 6 * 60, 'ตลาดเงียบ 04:00–06:00']],   // เวลาไทย · 2026-11-25 (summary-skip-0002-0406) · เดิม 06–12 + 19:15–20:30
     NEWS_BEFORE_MIN: 30, NEWS_AFTER_MIN: 15,   // ข่าวแดง USD: ห้ามตั้ง Limit 30 นาทีก่อน ถึง 15 นาทีหลัง
   },
   // 🧪 โหมดทดลอง (2026-11-19, backtest/summary-m5-entry-sltp-2026-11-19.md): Sell ที่โครงสร้าง (FVG + Fibo ทับ OB) และ Bias ผ่าน
   // ไม่ใช้ตัวกรองอื่น · Limit จุดเดียวกับระบบหลัก · SL คงที่ $3 · TP1 Fibo 0 ปิด 50% + บังทุน · TP2 เดิม · lot คงที่ (ไม่ใช้บันได)
   // Kelly Criterion f* = W − (1 − W) / R (2026-11-24) · W = win rate · R = กำไรเฉลี่ย ÷ ขาดทุนเฉลี่ย (หน่วย R)
-  // ค่า backtest จากโค้ดแอป M5 2025-06→2026-10 (backtest/smc_backtest.js m5-sl3) · M15 2022–26 ได้ PF 0.95 (m15-sl3) · ใช้ค่า forward test แทนเมื่อปิดครบ MIN_FT ไม้
-  KELLY: { BT: { all: { n: 452, W: 0.279, R: 3.44 }, buy: { n: 257, W: 0.288, R: 2.93 }, sell: { n: 195, W: 0.267, R: 4.16 } },
+  // ค่า backtest จากโค้ดแอป M5 2025-06→2026-10 (backtest/smc_backtest.js m5-sl3-skip0002-0406) · M15 2022–26 ได้ PF 0.95 (m15-sl3) · ใช้ค่า forward test แทนเมื่อปิดครบ MIN_FT ไม้
+  KELLY: { BT: { all: { n: 406, W: 0.296, R: 3.57 }, buy: { n: 234, W: 0.312, R: 2.96 }, sell: { n: 172, W: 0.273, R: 4.52 } },
            MIN_FT: 30, FRACS: [0.25, 0.5, 1], LOT_STEP: 0.02, MIN_LOT: 0.02, BAL_DEFAULT: 1000 },
   EXP: { ON: false, SIDE: 'sell', SL_USD: 3, LOT: 0.02, NEED: ['fvg', 'poi', 'bias', 'h4'], TAG: 'x3', NAME: '🧪 ทดลอง Sell SL $3' },
 };
@@ -736,9 +736,9 @@ function render() {
        <div class="checks">2) M5 ปิดทะลุ swing ล่าสุดด้วยแท่งตัวเต็ม (เนื้อ ≥ ${C.DISP_BODY * 100}% · ยาว ≥ ${C.DISP_ATR}×ATR) = BOS/CHoCH →
          OB = แท่งสวนทางแท่งสุดท้ายก่อนพุ่ง · FVG เหนือ/ใต้ OB · Fibo จากไส้ต่ำสุด→สูงสุดของคลื่น · POI = Fibo ${C.FIB_A * 100}–${+(C.FIB_B * 100).toFixed(1)}% ทับกล่อง OB</div>
        <div class="checks">3) Limit ที่ขอบ OB (หรือ 61.8% ถ้า FVG คลุม) · SL คงที่ $${C.SL_USD} จาก Entry · TP1 = Fibo 0% ปิด 50% + บังทุน · TP2 = Fibo −0.27 หรือ EQH/EQL ถัดไป (M5/H1) · ถือไม่เกิน 24 ชม.</div>
-       <div class="checks">ข้ามเฉพาะ: ไม่มี FVG · Fibo ไม่ทับ OB · ไม่ตรง Bias · ข่าวแดง USD 30 นาทีก่อน–15 นาทีหลัง (ไม่ใช้ตัวกรอง EQ / V / mitigated / SL / R:R / โซนใหญ่ / ช่วงเวลา แล้ว)</div>
-       <div class="checks" style="color:var(--side)">Backtest M5 2025-06→2026-10 (backtest/smc_backtest.js m5-sl3): 452 ไม้ (~30/เดือน) · win 28% · PF 1.32 · Buy 1.19 · Sell 1.48 · เข้าสุ่มแบบเดียวกัน PF ~1.11 —
-         SL $3 มาจากการลองหลายแบบ → สมมติฐาน ใช้ lot ต่ำจนกว่า forward test เกิน 30 ไม้ · กฎเดียวกันบน M15 2022–26 PF 0.95</div>`) +
+       <div class="checks">ข้ามเฉพาะ: ไม่มี FVG · Fibo ไม่ทับ OB · ไม่ตรง Bias · ข่าวแดง USD 30 นาทีก่อน–15 นาทีหลัง · <b>เวลา 00:00–02:00 และ 04:00–06:00</b> (ไม่ใช้ตัวกรอง EQ / V / mitigated / SL / R:R / โซนใหญ่ แล้ว)</div>
+       <div class="checks" style="color:var(--side)">Backtest M5 2025-06→2026-10 (backtest/smc_backtest.js m5-sl3-skip0002-0406): 406 ไม้ (~27/เดือน) · win 30% · PF 1.50 · +$939 / DD $125 ที่ 0.02 lot · Buy 1.34 · Sell 1.70 (ไม่งดเวลา: 452 ไม้ PF 1.32) —
+         กำไรพึ่งไม้ใหญ่ไม่กี่ไม้ (ตัด 10 ไม้ดีสุด PF 1.02) · SL $3 และช่วงงดเวลามาจากการลองหลายแบบ → สมมติฐาน ใช้ lot ต่ำจนกว่า forward test เกิน 30 ไม้ · กฎเดียวกันบน M15 2022–26 PF 0.95</div>`) +
     (X.ON ? xCard() : '') +
     (act.length ? act.map(setupCard).join('') : `<div class="empty">ยังไม่มี setup ที่รอราคา — รอ M5 ทำ BOS ด้วยแท่งตัวเต็ม</div>`) +
     (ended.length ? cblk('hist', '', '', '🕘 <b>setup ล่าสุดที่จบแล้ว</b> <span class="sum">(คิดจากแท่งย้อนหลังด้วย Bias ปัจจุบัน)</span>',
