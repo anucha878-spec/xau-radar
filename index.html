@@ -171,7 +171,7 @@ details.legend summary{cursor:pointer;color:var(--accent);margin:6px 0}
       <div id="chartWrap"><div id="chart"></div><div id="obLayer"></div></div>
       <div id="srsi"></div>
       <div class="srsi-lbl mono" id="srsiLbl"></div>
-      <details class="note legend"><summary>คำอธิบายเส้นบนกราฟ</summary>กราฟ M5 (เวลาไทย) · ม่วง = กล่อง OB · ฟ้า = FVG · ทองประ = Fibo 61.8/78.6 · ทองทึบ = จุดตั้ง Limit · แดง = SL · เขียว = TP1/TP2 · กล่องเขียว/แดง = OB H1 (บาง) / H4 (หนา) ที่ยังไม่ถูกใช้ · เส้นประหนา = EQH/EQL H1/H4 ที่ใกล้สุด · ● BOS = จุดทำลายโครงสร้าง · ลูกศร = ไม้ที่เข้าจริง</details>
+      <details class="note legend"><summary>คำอธิบายเส้นบนกราฟ</summary>กราฟ M5 (เวลาไทย) · ม่วง = กล่อง OB · ฟ้า = FVG · ทองประ = Fibo 61.8/78.6 · ทองทึบ = จุดตั้ง Limit · แดง = SL · เขียว = TP1/TP2 · กล่องเขียว/แดง = OB H1 (บาง) / H4 (หนา) ที่ยังไม่ถูกใช้ · เส้นประหนา = EQH/EQL H1/H4 ที่ใกล้สุด · ● BOS = จุดทำลายโครงสร้าง · HH/HL (เขียว) LH/LL (ส้ม) = swing M15 เทียบ swing ก่อนหน้า · ลูกศร = ไม้ที่เข้าจริง</details>
     </div>
     <div style="display:grid;gap:16px;align-content:start">
       <div class="panel" style="border-color:var(--gold)" id="sysPanel"><h2 class="ph">📋 ระบบ SMC M5 <button id="btnSys" aria-expanded="true" title="ย่อ/ขยายรายละเอียดทุกส่วน">▾ ย่อทั้งหมด</button></h2><div id="ladder"></div><div id="system"></div><div id="sysSigs"></div></div>
@@ -201,6 +201,7 @@ const CFG = {
   PIVOT: { D1: 2, H4: 3, H1: 3, M5: 3 },   // fractal ซ้าย/ขวา (ใช้กับ Trend)
   ADX_SIDEWAY: 18,           // ADX ต่ำกว่านี้ = ไม่มีเทรนด์
   WEIGHT: { D1: 3, H4: 2, H1: 1 },
+  SWING: { SEC: 900, K: 3 },   // ป้าย HH/HL/LH/LL บนกราฟ = swing M15 (ประกอบจาก M5) fractal 3 · 2026-11-26 (เดิม M5)
   STOCHRSI: { K: 3, D: 3, RSI: 14, STOCH: 14, OB: 80, OS: 20 },
   // ระบบ SMC M5 (2026-11-18 เริ่มที่ M15 · 2026-11-19 เปลี่ยนเป็น M5 · 2026-11-25 ลอง M15 แล้วกลับเป็น M5 วันเดียวกัน)
   SMC: {
@@ -768,8 +769,28 @@ function render() {
   const t0 = mb[0].t;
   S.bosMarkers = ['buy', 'sell'].flatMap(sd => S.smc[sd]).filter(s => s.t0 >= t0).map(s => ({ time: s.t0 + CFG.TZ, position: s.sg > 0 ? 'belowBar' : 'aboveBar',
     color: s.sg > 0 ? 'rgba(38,166,154,.7)' : 'rgba(239,83,80,.7)', shape: 'circle', text: 'BOS' }));
+  S.swingMarkers = swingMarkers(S.bars.M5, t0);
   S.obBoxes = live.filter(z => z.kind === 'OB');
   renderSignals(); drawObBoxes();
+}
+
+// จุด Swing M15 (fractal CFG.SWING.K ยืนยันแล้ว) ประกอบแท่ง M15 จาก M5 · เทียบกับ swing ก่อนหน้าฝั่งเดียวกัน: HH/LH บนไส้บน · HL/LL ใต้ไส้ล่าง
+// ป้ายวางที่แท่ง M5 ที่เป็นจุดสูง/ต่ำสุดจริงของแท่ง M15 นั้น · ดูประกอบ ไม่ใช้ตัดสินสัญญาณ
+function aggBars(b, sec) {
+  const out = [];
+  for (const x of b) {
+    const t = Math.floor(x.t / sec) * sec, a = out.at(-1);
+    if (!a || a.t !== t) out.push({ t, o: x.o, h: x.h, l: x.l, c: x.c, tH: x.t, tL: x.t });
+    else { if (x.h > a.h) { a.h = x.h; a.tH = x.t; } if (x.l < a.l) { a.l = x.l; a.tL = x.t; } a.c = x.c; }
+  }
+  return out;
+}
+function swingMarkers(m5, t0) {
+  const b = aggBars(m5, CFG.SWING.SEC).slice(0, -1);   // ตัดแท่ง M15 ที่ยังไม่ปิด
+  const { hs, ls } = pivots(b, CFG.SWING.K), out = [];
+  hs.forEach((p, n) => { const tm = b[p.i].tH; if (n && tm >= t0) { const up = p.p > hs[n - 1].p; out.push({ time: tm + CFG.TZ, position: 'aboveBar', color: up ? '#3fb950' : '#f0883e', shape: 'circle', size: 0, text: up ? 'HH' : 'LH' }); } });
+  ls.forEach((p, n) => { const tm = b[p.i].tL; if (n && tm >= t0) { const up = p.p > ls[n - 1].p; out.push({ time: tm + CFG.TZ, position: 'belowBar', color: up ? '#3fb950' : '#f0883e', shape: 'circle', size: 0, text: up ? 'HL' : 'LL' }); } });
+  return out;
 }
 
 // ไม้ที่ "เข้าจริง" เท่านั้น (จากบันทึก: server signals-log / localStorage บนมือถือ) — ไม่คำนวณย้อนหลัง จึงไม่ repaint
@@ -791,7 +812,7 @@ function renderSignals() {
     time: t.bar_time + CFG.TZ, position: t.side === 'sell' ? 'aboveBar' : 'belowBar', color: t.side === 'sell' ? '#ef5350' : '#26a69a',
     shape: t.side === 'sell' ? 'arrowDown' : 'arrowUp', text: `${t.mode ? '🧪' : ''}${t.side === 'sell' ? 'SELL' : 'BUY'}${t.status === 'TP2' || t.status === 'TP1+BE' ? ' ✓' : t.status === 'SL' ? ' ✗' : ''}` }));
   const bt = new Set(tm.map(x => x.time));
-  series.setMarkers([...tm, ...(S.bosMarkers || []).filter(x => !bt.has(x.time))].sort((a, b) => a.time - b.time));
+  series.setMarkers([...tm, ...(S.bosMarkers || []).filter(x => !bt.has(x.time)), ...(S.swingMarkers || [])].sort((a, b) => a.time - b.time));
   (S.tradeLines || []).forEach(l => series.removePriceLine(l)); S.tradeLines = [];
   const open = T.find(t => t.status === 'open' || t.status === 'TP1');
   if (open) [['SL' + (open.status === 'TP1' ? ' → บังทุน' : ''), open.status === 'TP1' ? open.entry : open.sl, '#ef5350'], ['TP1', open.tp1, '#26a69a'], ['TP2', open.tp2, '#26a69a'], ['เข้า', open.entry, '#e3b341']].forEach(([t, p, c]) =>
